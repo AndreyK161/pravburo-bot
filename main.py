@@ -38,6 +38,9 @@ USER_ACTIVITY: dict[int, int] = {}
 # Последнее сообщение бота на пользователя — то, что заменяем при переходе между блоками.
 LAST_BOT_MESSAGE: dict[int, Message] = {}
 
+# Пауза перед автопереходом (auto_next), чтобы сообщения цепочки не сыпались разом.
+AUTO_NEXT_DELAY_SECONDS = 1.5
+
 
 def touch(user_id: int) -> int:
     USER_ACTIVITY[user_id] = USER_ACTIVITY.get(user_id, 0) + 1
@@ -56,6 +59,24 @@ def build_keyboard(buttons: list[dict]) -> InlineKeyboardMarkup | None:
 async def is_subscribed(bot: Bot, channel: str, user_id: int) -> bool:
     member = await bot.get_chat_member(chat_id=channel, user_id=user_id)
     return member.status not in ("left", "kicked")
+
+
+async def show_text(
+    bot: Bot, chat_id: int, user_id: int, text: str, keyboard: InlineKeyboardMarkup | None, should_replace: bool
+) -> None:
+    prior_message = LAST_BOT_MESSAGE.get(user_id)
+    if should_replace:
+        try:
+            sent = await prior_message.edit_text(text, reply_markup=keyboard)
+            LAST_BOT_MESSAGE[user_id] = sent
+            return
+        except TelegramBadRequest as e:
+            if "message is not modified" not in str(e):
+                sent = await bot.send_message(chat_id, text, reply_markup=keyboard)
+                LAST_BOT_MESSAGE[user_id] = sent
+            return
+    sent = await bot.send_message(chat_id, text, reply_markup=keyboard)
+    LAST_BOT_MESSAGE[user_id] = sent
 
 
 async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, replace: bool = True) -> None:
@@ -78,39 +99,31 @@ async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, repl
         asyncio.create_task(wait_and_continue())
         return
 
-    keyboard = build_keyboard(block["buttons"])
+    keyboard = build_keyboard(block.get("buttons", []))
     prior_message = LAST_BOT_MESSAGE.get(user_id)
     should_replace = replace and prior_message is not None and block_id != NEVER_REPLACE_BLOCK
 
     if block["type"] == "message":
-        if should_replace:
-            try:
-                sent = await prior_message.edit_text(block["text"], reply_markup=keyboard)
-                LAST_BOT_MESSAGE[user_id] = sent
-            except TelegramBadRequest as e:
-                if "message is not modified" not in str(e):
-                    sent = await bot.send_message(chat_id, block["text"], reply_markup=keyboard)
-                    LAST_BOT_MESSAGE[user_id] = sent
-        else:
-            sent = await bot.send_message(chat_id, block["text"], reply_markup=keyboard)
-            LAST_BOT_MESSAGE[user_id] = sent
+        await show_text(bot, chat_id, user_id, block["text"], keyboard, should_replace)
 
     elif block["type"] == "document":
-        if should_replace:
-            try:
-                await prior_message.delete()
-            except TelegramBadRequest:
-                pass
-        file_path = FILES_DIR / block["file"]
-        if file_path.exists():
-            sent = await bot.send_document(chat_id, FSInputFile(file_path), caption=block["text"], reply_markup=keyboard)
+        file_names = block["file"] if isinstance(block["file"], list) else [block["file"]]
+        missing = [name for name in file_names if not (FILES_DIR / name).exists()]
+        if missing:
+            missing_list = ", ".join(missing)
+            text = f"{block['text']}\n\n[файлы ещё не загружены в test_data/files: {missing_list}]"
+            await show_text(bot, chat_id, user_id, text, keyboard, should_replace)
         else:
-            text = f"{block['text']}\n\n[файл {block['file']} ещё не загружен в test_data/files]"
-            sent = await bot.send_message(chat_id, text, reply_markup=keyboard)
-        LAST_BOT_MESSAGE[user_id] = sent
+            await show_text(bot, chat_id, user_id, block["text"], keyboard, should_replace)
+            for name in file_names:
+                await bot.send_document(chat_id, FSInputFile(FILES_DIR / name))
 
     if block.get("auto_next"):
-        await render_block(bot, chat_id, user_id, block["auto_next"], replace=replace)
+        # auto_next — следующее звено той же цепочки сообщений, а не переход
+        # по кнопке, поэтому шлём новым сообщением, не трогая предыдущее.
+        await bot.send_chat_action(chat_id, "typing")
+        await asyncio.sleep(AUTO_NEXT_DELAY_SECONDS)
+        await render_block(bot, chat_id, user_id, block["auto_next"], replace=False)
 
 
 # Command handler
@@ -127,6 +140,18 @@ async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
     next_block_id = callback.data.removeprefix("block:")
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
     await callback.answer()
+
+
+# Защита от произвольного текста: если юзер написал что-то своё вместо
+# нажатия кнопки, просто направляем его обратно в главное меню.
+@dp.message()
+async def fallback_text_handler(message: Message, bot: Bot) -> None:
+    touch(message.from_user.id)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="В меню", callback_data="block:general_menu")]
+    ])
+    sent = await bot.send_message(message.chat.id, "Для возврата в главное меню нажмите ⬇️", reply_markup=keyboard)
+    LAST_BOT_MESSAGE[message.from_user.id] = sent
 
 
 # Run the bot

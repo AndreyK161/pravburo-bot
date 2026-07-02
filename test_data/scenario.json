@@ -53,35 +53,70 @@
     },
     "stub_collectors": {
       "type": "message",
-      "text": "Раздел «Коллекторы» пока в разработке.",
-      "buttons": [
-        {"text": "В меню", "next": "general_menu"}
-      ]
+      "text": "В этом видео Вы узнаете, как коллекторы нарушают Ваши права и что делать в таком случае ⬇️\n\nhttps://youtu.be/Q21P-Rl5C5c",
+      "auto_next": "collectors_files"
+    },
+    "collectors_files": {
+      "type": "document",
+      "text": "Форма заявления на отказ от взаимодействия с кредиторами, о которой Станислав Валерьевич говорит в видео ⬇️",
+      "file": "Otkaz_ot_vzaimodejstvia_s_kollektorami.pdf",
+      "auto_next": "collectors_memo"
+    },
+    "collectors_memo": {
+      "type": "document",
+      "text": "А вот для Вас памятка о том, на что имеют право коллекторы, а что запрещено по закону. Помните о своих правах! ☺️",
+      "file": "collectors_memo_photo.jpeg",
+      "auto_next": "collectors_threat"
+    },
+    "collectors_threat": {
+      "type": "document",
+      "text": "Если коллекторы угрожают Вам, нарушают Ваши права - пишите данное заявление в полицию",
+      "file": "Zaloba_na_kollektorov_v_policiu_docx.pdf",
+      "auto_next": "recommendation"
     },
     "stub_mfc": {
       "type": "message",
-      "text": "Раздел «МФЦ» пока в разработке.",
+      "text": "В этом Видео наш руководитель Станислав Свириденко, рассказывает об условиях для подачи на бесплатное банкротство в МФЦ. А также наглядно разбирает заполнение документов ⬇️\n\nhttps://rutube.ru/video/6c731d43261f052abd8a292b728cb7ee/",
+      "auto_next": "mfc_files"
+    },
+    "mfc_files": {
+      "type": "document",
+      "text": "Необходимые файлы для подачи на бесплатное банкротство через МФЦ ⬇️",
+      "file": ["Uvedomlenie_o_susestvennom_izmenenii_imusestvennogo_polozenia.pdf", "Spisok_kreditorov.pdf", "Forma_zaavlenia.pdf"],
+      "auto_next": "recommendation"
+    },
+    "recommendation": {
+      "type": "message",
+      "text": "А если хотите узнать, можно ли Вам списать долги по закону, записывайтесь на бесплатную консультацию",
       "buttons": [
+        {"text": "Консультация", "next": "consultation"},
         {"text": "В меню", "next": "general_menu"}
       ]
     },
     "stub_order": {
+      "type": "document",
+      "text": "Направьте это заявление в суд для отмены судебного приказа. Главное помните, что это временное решение ⬇️",
+      "file": "otmena_prikaza.pdf",
+      "auto_next": "order_video"
+    },
+    "order_video": {
       "type": "message",
-      "text": "Раздел «Приказ» пока в разработке.",
+      "text": "А в этом видео наш руководитель Станислав Валерьевич рассказывает подробнее об отмене судебного приказа⬇️\n\nhttps://youtu.be/vcsK8lPJMgI?si=GUl5ekNeLgQjB4qh",
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
       ]
     },
     "stub_sid": {
-      "type": "message",
-      "text": "Раздел «СИД» пока в разработке.",
+      "type": "document",
+      "text": "Когда можно применить списание долга по сроку исковой давности и как это сделать, рассказывает в видео руководитель нашей компании Станислав Свириденко ⬇️\n\nhttps://youtu.be/aqDYxudfDn0?si=tEALlIj-zqtVuSHb\n\n",
+      "file": "SID.pdf",
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
       ]
     },
     "stub_children": {
       "type": "document",
-      "text": "Направьте это заявление судебному приставу в случае, если взыскали детские пособия или наложили арест на счёт, на который они поступают ⬇️\n\nДля возврата в главное меню нажмите ⬇️",
+      "text": "Направьте это заявление судебному приставу в случае, если взыскали детские пособия или наложили арест на счёт, на который они поступают ⬇️\n\n",
       "file": "Snatie_aresta_so_sceta_s_detskimi_posobiami_docx.pdf",
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
@@ -89,7 +124,7 @@
     },
     "stub_cancel": {
       "type": "document",
-      "text": "Если у Вас карточка в том же банке, что и кредит, банк без уведомления может списать деньги с любого счета открытого в нем. Чаще всего Вы сами соглашаетесь на это, подписывая договор. Но это можно отменить, написав данное заявление в банк ⬇️\n\nДля возврата в главное меню нажмите ⬇️",
+      "text": "Если у Вас карточка в том же банке, что и кредит, банк без уведомления может списать деньги с любого счета открытого в нем. Чаще всего Вы сами соглашаетесь на это, подписывая договор. Но это можно отменить, написав данное заявление в банк ⬇️\n\n",
       "file": "Otzyv_soglasia_v_banke.pdf",
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
@@ -111,7 +146,7 @@
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
       ],
-      "auto_next": "delay_followup"
+      "auto_next": "delay_five_minutes"
     },
     "topic_finance_guide": {
       "type": "document",
@@ -120,7 +155,7 @@
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
       ],
-      "auto_next": "delay_followup"
+      "auto_next": "delay_five_minutes"
     },
     "topic_stop_work_for_banks": {
       "type": "document",
@@ -129,16 +164,29 @@
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
       ],
-      "auto_next": "delay_followup"
+      "auto_next": "delay_five_minutes"
     },
-    "delay_followup": {
+    "delay_five_minutes": {
       "type": "delay",
       "seconds": 300,
-      "next": "followup_message"
+      "next": "followup_message_check_list"
     },
-    "followup_message": {
+    "followup_message_check_list": {
       "type": "message",
       "text": "Если чувствуете, что проблема с долгами уже не «мелкая» — не оставайтесь с ней один на один.\nЧаще всего люди жалеют только об одном — что слишком долго тянули с решением.\n\nОбращайтесь и мы разберём вашу ситуацию👇",
+      "buttons": [
+        {"text": "Консультация", "next": "consultation"},
+        {"text": "В меню", "next": "general_menu"}
+      ]
+    },
+    "delay_twenty_minutes": {
+      "type": "delay",
+      "seconds": 1200,
+      "next": "followup_message_mfc"
+    },
+    "followup_message_mfc": {
+      "type": "message",
+      "text": "Если после просмотра видео Вы всё еще сомневаетесь подходит ли Вам списание долгов в МФЦ или точно убедились, что не подходит и хотите узнать о списании долга в суде, записывайтесь на бесплатную консультацию ✔️",
       "buttons": [
         {"text": "Консультация", "next": "consultation"},
         {"text": "В меню", "next": "general_menu"}
