@@ -89,7 +89,11 @@ async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, repl
 
     elif block["type"] == "input":
         await show_text(bot, chat_id, user_id, block["text"], keyboard, should_replace)
-        AWAITING_INPUT[user_id] = {"save_as": block["save_as"], "next": block["next"]}
+        AWAITING_INPUT[user_id] = {
+            "save_as": block["save_as"],
+            "next": block["next"],
+            "validate": block.get("validate"),
+        }
         return
 
     elif block["type"] == "document":

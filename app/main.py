@@ -2,8 +2,8 @@ import asyncio
 
 from aiogram import Bot
 
-from app.config import TOKEN
-from app.database import init_db_pool
+from config import TOKEN
+from database import init_db_pool
 from handlers import dp
 
 

@@ -5,6 +5,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from database import save_user_field, upsert_user
 from scenario_engine import SCENARIO, render_block
 from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_DATA, touch
+from validators import VALIDATORS
 
 dp = Dispatcher()
 
@@ -38,10 +39,22 @@ async def fallback_text_handler(message: Message, bot: Bot) -> None:
     user_id = message.from_user.id
     touch(user_id)
 
-    pending = AWAITING_INPUT.pop(user_id, None)
+    pending = AWAITING_INPUT.get(user_id)
     if pending:
-        USER_DATA.setdefault(user_id, {})[pending["save_as"]] = message.text
-        await save_user_field(user_id, pending["save_as"], message.text)
+        value = message.text
+        validator = VALIDATORS.get(pending.get("validate"))
+        if validator:
+            value = validator(message.text)
+            if value is None:
+                await bot.send_message(
+                    message.chat.id,
+                    "Не похоже на номер телефона. Введите номер в формате +7XXXXXXXXXX или 8XXXXXXXXXX",
+                )
+                return  # ждём ввод ещё раз, AWAITING_INPUT не трогаем
+
+        AWAITING_INPUT.pop(user_id, None)
+        USER_DATA.setdefault(user_id, {})[pending["save_as"]] = value
+        await save_user_field(user_id, pending["save_as"], value)
         await render_block(bot, message.chat.id, user_id, pending["next"], replace=False)
         return
 
