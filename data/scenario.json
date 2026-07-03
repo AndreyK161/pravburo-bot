@@ -31,10 +31,112 @@
       ]
     },
     "consultation": {
+      "type": "document",
+      "text": "Для того, чтобы получить бесплатную консультацию, ответьте на несколько вопросов☺️",
+      "file": "konsult.jpeg",
+      "auto_next": "consultation_question_name"
+    },
+    "consultation_question_name": {
+      "type": "input",
+      "text": "Как вас зовут?",
+      "save_as": "name",
+      "next": "consultation_question_region"
+    },
+    "consultation_question_region": {
+      "type": "input",
+      "text": "В каком регионе вы проживаете?",
+      "save_as": "region",
+      "next": "consultation_menu"
+    },
+    "consultation_menu": {
       "type": "message",
-      "text": "Оставьте, пожалуйста, ваш номер телефона — наш юрист свяжется с вами в ближайшее время.",
+      "text": "Какая у вас общая сумма долга?",
+      "buttons": [
+        {"text": "до 25 тыс.р", "next": "consultation_to_twenty-five"},
+        {"text": "25-150 тыс.р", "next": "consultation_recommend_mfc_to_one-hundred-fifty"},
+        {"text": "150-300 тыс.р", "next": "consultation_to_three-hundred"},
+        {"text": "более 300 тыс.р", "next": "consultation_before_three-hundred"}
+      ]
+    },
+    "consultation_to_twenty-five": {
+      "type": "message",
+      "text": "Это общая сумма всех долгов? Или может есть кредиты, которые платите? Долг по ЖКХ, налогам, штрафам?",
+      "buttons": [
+        {"text": "Общая сумма", "next": "consultation_summary_to_twenty-five"},
+        {"text": "Есть еще", "next": "consultation_to_twenty-five"}
+      ]
+    },
+    "consultation_summary_to_twenty-five": {
+      "type": "document",
+      "text": "Такой долг лучше гасить самостоятельно. Для банкротства в МФЦ сумма долга должна быть от 25 000р. А в Арбитражном суде Вам будет невыгодно списывать этот долг, так как судебных расходов выйдет намного больше, чем сумма Вашего долга.",
+      "file": "nevigoda.jpeg",
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
+      ]
+    },
+    "consultation_menu_add": {
+      "type": "message",
+      "text": "Какая у вас общая сумма долга?",
+      "buttons": [
+        {"text": "25-150 тыс.р", "next": "consultation_recommend_mfc_to_one-hundred-fifty"},
+        {"text": "150-300 тыс.р", "next": "consultation_to_three-hundred"},
+        {"text": "более 300 тыс.р", "next": "consultation_to_three-hundred"}
+      ]
+    },
+    "consultation_recommend_mfc_to_one-hundred-fifty": {
+      "type": "message",
+      "text": "Списание долга в Арбитражном суде Вам будет невыгодно, но возможно, Вам подойдет бесплатное банкротство через МФЦ. \n\nПосмотрите видео от нашего руководителя, в котором он подробно рассказывает в каких случаях оно подходит⬇️\n\nhttps://rutube.ru/video/ad04a087d13ba19869bae8ded4eaaba1/?r=wd",
+      "auto_next": "consultation_documents_to_one-hundred-fifty"
+    },
+    "consultation_documents_to_one-hundred-fifty": {
+      "type": "document",
+      "text": "Необходимые документы для подачи банкротства в МФЦ",
+      "file": ["Uvedomlenie_o_susestvennom_izmenenii_imusestvennogo_polozenia.pdf", "Spisok_kreditorov.pdf", "Forma_zaavlenia.pdf"],
+      "auto_next": "consultation_to_one-hundred-fifty"
+    },
+    "consultation_to_one-hundred-fifty": {
+      "type": "message",
+      "text": "Это общая сумма всех долгов? Или может есть кредиты, которые платите? Долг по ЖКХ, налогам, штрафам?",
+      "buttons": [
+        {"text": "Общая сумма", "next": "consultation_attentively_to_twenty-five"},
+        {"text": "Есть еще", "next": "consultation_offer_phone"}
+      ]
+    },
+    "consultation_attentively_to_twenty-five": {
+      "type": "message",
+      "text": "посмотрите внимательно видео, отправленное ранее, возможно Вам подойдет списание долга в МФЦ",
+      "buttons": [
+        {"text": "В меню", "next": "general_menu"}
+      ]
+    },
+    "consultation_offer_phone": {
+      "type": "message",
+      "text": "Давайте Вам позвонит наш специалист, подробно расскажет, какие варианты решения вопроса с долгом есть в Вашем случае. Это бесплатно✔️",
+      "auto_next": "consultation_add_phone"
+    },
+    "consultation_add_phone": {
+      "type": "input",
+      "text": "Введите свой контактный номер телефона в сообщении☺️\n\nЕсли хотите вернуться назад, нажмите «меню»",
+      "save_as": "tg_account",
+      "buttons": [
+        {"text": "В меню", "next": "general_menu"}
+      ],
+      "next": "consultation_contact"
+    },
+    "consultation_contact": {
+      "type": "message",
+      "text": "С Вами свяжется специалист компании \"Правбюро\" в ближайшее время с 10:00 до 19:00 по Московскому времени ☺️",
+      "buttons": [
+        {"text": "В меню", "next": "general_menu"}
+      ]
+    },
+    "consultation_to_three-hundred": {
+      "type": "document",
+      "text": "Есть ли у Вас залоговое имущество?",
+      "file": "reshenie_est.jpeg",
+      "buttons": [
+        {"text": "Да", "next": "consultation_offer_phone"},
+        {"text": "Нет", "next": "consultation_offer_phone"}
       ]
     },
     "stub_chat": {
