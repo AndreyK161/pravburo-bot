@@ -12,8 +12,6 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     FSInputFile,
-    InputMediaDocument,
-    InputMediaPhoto,
 )
 from aiogram.filters import Command
 
@@ -46,6 +44,13 @@ AUTO_NEXT_DELAY_SECONDS = 1.5
 # Файлы с такими расширениями шлём как фото (send_photo), а не как документ —
 # тогда в чате показывается превью картинки, а не иконка файла.
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
+# Если юзер сейчас в блоке "input" — храним, куда сохранить его ответ и что
+# показать дальше. Пока это так, fallback_text_handler не шлёт "вернитесь в меню".
+AWAITING_INPUT: dict[int, dict] = {}
+
+# Собранные от пользователей ответы (имя, телефон и т.п.): user_id -> {"name": "..."}
+USER_DATA: dict[int, dict] = {}
 
 
 def touch(user_id: int) -> int:
@@ -80,12 +85,6 @@ async def send_file_with_caption(
     if file_path.suffix.lower() in IMAGE_EXTENSIONS:
         return await bot.send_photo(chat_id, FSInputFile(file_path), caption=caption, reply_markup=keyboard)
     return await bot.send_document(chat_id, FSInputFile(file_path), caption=caption, reply_markup=keyboard)
-
-
-def build_media(file_path: Path, caption: str | None = None) -> InputMediaDocument | InputMediaPhoto:
-    if file_path.suffix.lower() in IMAGE_EXTENSIONS:
-        return InputMediaPhoto(media=FSInputFile(file_path), caption=caption)
-    return InputMediaDocument(media=FSInputFile(file_path), caption=caption)
 
 
 async def show_text(
@@ -133,24 +132,25 @@ async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, repl
     if block["type"] == "message":
         await show_text(bot, chat_id, user_id, block["text"], keyboard, should_replace)
 
+    elif block["type"] == "input":
+        await show_text(bot, chat_id, user_id, block["text"], keyboard, should_replace)
+        AWAITING_INPUT[user_id] = {"save_as": block["save_as"], "next": block["next"]}
+        return
+
     elif block["type"] == "document":
         file_names = block["file"] if isinstance(block["file"], list) else [block["file"]]
         missing = [name for name in file_names if not (FILES_DIR / name).exists()]
+        single_image = len(file_names) == 1 and (FILES_DIR / file_names[0]).suffix.lower() in IMAGE_EXTENSIONS
         if missing:
             missing_list = ", ".join(missing)
             text = f"{block['text']}\n\n[файлы ещё не загружены в data/files: {missing_list}]"
             await show_text(bot, chat_id, user_id, text, keyboard, should_replace)
-        elif len(file_names) > 1 and keyboard is None:
-            # Кнопок нет — можно собрать все файлы в один альбом (Telegram не даёт
-            # кнопки на альбомах, но раз их и не должно быть, это не проблема).
-            media = [build_media(FILES_DIR / file_names[0], caption=block["text"])]
-            media += [build_media(FILES_DIR / name) for name in file_names[1:]]
-            sent_messages = await bot.send_media_group(chat_id, media)
-            LAST_BOT_MESSAGE[user_id] = sent_messages[0]
-        else:
+        elif single_image:
             sent = await send_file_with_caption(bot, chat_id, FILES_DIR / file_names[0], block["text"], keyboard)
             LAST_BOT_MESSAGE[user_id] = sent
-            for name in file_names[1:]:
+        else:
+            await show_text(bot, chat_id, user_id, block["text"], keyboard, should_replace)
+            for name in file_names:
                 await send_file(bot, chat_id, FILES_DIR / name)
 
     if block.get("auto_next"):
@@ -165,6 +165,7 @@ async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, repl
 @dp.message(Command("start"))
 async def command_start_handler(message: Message, bot: Bot) -> None:
     touch(message.from_user.id)
+    AWAITING_INPUT.pop(message.from_user.id, None)
     await render_block(bot, message.chat.id, message.from_user.id, SCENARIO["start"], replace=False)
 
 
@@ -172,6 +173,7 @@ async def command_start_handler(message: Message, bot: Bot) -> None:
 @dp.callback_query(F.data.startswith("block:"))
 async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
     touch(callback.from_user.id)
+    AWAITING_INPUT.pop(callback.from_user.id, None)
     next_block_id = callback.data.removeprefix("block:")
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
     await callback.answer()
@@ -179,14 +181,23 @@ async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
 
 # Защита от произвольного текста: если юзер написал что-то своё вместо
 # нажатия кнопки, просто направляем его обратно в главное меню.
+# Исключение — если бот ждёт от него конкретный ввод (блок "input").
 @dp.message()
 async def fallback_text_handler(message: Message, bot: Bot) -> None:
-    touch(message.from_user.id)
+    user_id = message.from_user.id
+    touch(user_id)
+
+    pending = AWAITING_INPUT.pop(user_id, None)
+    if pending:
+        USER_DATA.setdefault(user_id, {})[pending["save_as"]] = message.text
+        await render_block(bot, message.chat.id, user_id, pending["next"], replace=False)
+        return
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="В меню", callback_data="block:general_menu")]
     ])
     sent = await bot.send_message(message.chat.id, "Для возврата в главное меню нажмите ⬇️", reply_markup=keyboard)
-    LAST_BOT_MESSAGE[message.from_user.id] = sent
+    LAST_BOT_MESSAGE[user_id] = sent
 
 
 # Run the bot
