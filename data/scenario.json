@@ -38,18 +38,34 @@
       ]
     },
     "stub_chat": {
-      "type": "message",
-      "text": "Раздел «Чат» пока в разработке. Скоро здесь будет ссылка на закрытый чат поддержки.",
+      "type": "document",
+      "text": "Присоединяйтесь к закрытому чату, в котором состоят люди на разной стадии процедуры банкротства: \n\n🔹 Сейчас проходят её\n🔹 Уже списали свои долги\n🔹 Только подумывают о прохождении процедуры\n\nА также в этом чате есть юристы, которые помогут найти ответы на ваши вопросы☺️\nhttps://t.me/+MB-25TrWGJpiMGEy",
+      "file": "chat.jpeg",
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
       ]
     },
     "stub_bailiffs": {
+      "type": "document",
+      "text": "Направьте это заявление приставу, если взыскивают с зарплаты/пенсии, не оставляя прожиточный минимум ⬇️",
+      "file": "Zaavlenie_pristavu.pdf",
+      "auto_next": "bailiffs_video"
+    },
+    "bailiffs_video": {
       "type": "message",
-      "text": "Раздел «Приставы» пока в разработке.",
-      "buttons": [
-        {"text": "В меню", "next": "general_menu"}
-      ]
+      "text": "Сколько имеют право списывать приставы и в каких случаях необходимо направлять это заявление? Смотрите в видео⬇️\n\nhttps://rutube.ru/video/b3a7625487c72fe92e628cfff94b8dc0/?r=wd",
+      "auto_next": "bailiffs_gosuslugi_video"
+    },
+    "bailiffs_gosuslugi_video": {
+      "type": "message",
+      "text": "Также Вы можете подать жалобу через госуслуги. В этом видео руководитель нашей компании подробно рассказывает, как это сделать ⬇️\n\nhttps://rutube.ru/video/36508f8b010182a66dc664baf3850bfe/",
+      "auto_next": "bailiffs_regular_writting"
+    },
+    "bailiffs_regular_writting": {
+      "type": "document",
+      "text": "Если пристав совершает регулярно неправомерные взыскания, либо не реагирует на жалобы, необходимо писать заявление старшему приставу ⬇️",
+      "file": "Zaloba_na_kollektorov_v_policiu_docx.pdf",
+      "auto_next": "recommendation"
     },
     "stub_collectors": {
       "type": "message",
@@ -84,14 +100,6 @@
       "text": "Необходимые файлы для подачи на бесплатное банкротство через МФЦ ⬇️",
       "file": ["Uvedomlenie_o_susestvennom_izmenenii_imusestvennogo_polozenia.pdf", "Spisok_kreditorov.pdf", "Forma_zaavlenia.pdf"],
       "auto_next": "recommendation"
-    },
-    "recommendation": {
-      "type": "message",
-      "text": "А если хотите узнать, можно ли Вам списать долги по закону, записывайтесь на бесплатную консультацию",
-      "buttons": [
-        {"text": "Консультация", "next": "consultation"},
-        {"text": "В меню", "next": "general_menu"}
-      ]
     },
     "stub_order": {
       "type": "document",
@@ -187,6 +195,14 @@
     "followup_message_mfc": {
       "type": "message",
       "text": "Если после просмотра видео Вы всё еще сомневаетесь подходит ли Вам списание долгов в МФЦ или точно убедились, что не подходит и хотите узнать о списании долга в суде, записывайтесь на бесплатную консультацию ✔️",
+      "buttons": [
+        {"text": "Консультация", "next": "consultation"},
+        {"text": "В меню", "next": "general_menu"}
+      ]
+    },
+    "recommendation": {
+      "type": "message",
+      "text": "А если хотите узнать, можно ли Вам списать долги по закону, записывайтесь на бесплатную консультацию",
       "buttons": [
         {"text": "Консультация", "next": "consultation"},
         {"text": "В меню", "next": "general_menu"}
