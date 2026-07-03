@@ -1,61 +1,16 @@
 import asyncio
 import json
-from os import getenv
 from pathlib import Path
 
-from dotenv import load_dotenv
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.types import (
-    Message,
-    CallbackQuery,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    FSInputFile,
-)
-from aiogram.filters import Command
+from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-load_dotenv()
+from config import AUTO_NEXT_DELAY_SECONDS, FILES_DIR, IMAGE_EXTENSIONS, NEVER_REPLACE_BLOCK, SCENARIO_PATH
+from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_ACTIVITY
 
-TOKEN = getenv("BOT_TOKEN")
-
-dp = Dispatcher()
-
-TEST_DATA_DIR = Path(__file__).parent / "data"
-FILES_DIR = TEST_DATA_DIR / "files"
-
-with open(TEST_DATA_DIR / "scenario.json", "r", encoding="utf-8") as f:
+with open(SCENARIO_PATH, "r", encoding="utf-8") as f:
     SCENARIO = json.load(f)
-
-# Блок, который никогда не редактируется поверх предыдущего сообщения —
-# всегда шлётся заново, чтобы пользователь легко находил главное меню в чате.
-NEVER_REPLACE_BLOCK = "general_menu"
-
-# Счётчик активности на пользователя: растёт при каждом действии.
-# Задержки сверяются с ним, чтобы не сработать, если юзер уже сделал что-то ещё.
-USER_ACTIVITY: dict[int, int] = {}
-
-# Последнее сообщение бота на пользователя — то, что заменяем при переходе между блоками.
-LAST_BOT_MESSAGE: dict[int, Message] = {}
-
-# Пауза перед автопереходом (auto_next), чтобы сообщения цепочки не сыпались разом.
-AUTO_NEXT_DELAY_SECONDS = 1.5
-
-# Файлы с такими расширениями шлём как фото (send_photo), а не как документ —
-# тогда в чате показывается превью картинки, а не иконка файла.
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
-
-# Если юзер сейчас в блоке "input" — храним, куда сохранить его ответ и что
-# показать дальше. Пока это так, fallback_text_handler не шлёт "вернитесь в меню".
-AWAITING_INPUT: dict[int, dict] = {}
-
-# Собранные от пользователей ответы (имя, телефон и т.п.): user_id -> {"name": "..."}
-USER_DATA: dict[int, dict] = {}
-
-
-def touch(user_id: int) -> int:
-    USER_ACTIVITY[user_id] = USER_ACTIVITY.get(user_id, 0) + 1
-    return USER_ACTIVITY[user_id]
 
 
 def build_keyboard(buttons: list[dict]) -> InlineKeyboardMarkup | None:
@@ -159,52 +114,3 @@ async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, repl
         await bot.send_chat_action(chat_id, "typing")
         await asyncio.sleep(AUTO_NEXT_DELAY_SECONDS)
         await render_block(bot, chat_id, user_id, block["auto_next"], replace=False)
-
-
-# Command handler
-@dp.message(Command("start"))
-async def command_start_handler(message: Message, bot: Bot) -> None:
-    touch(message.from_user.id)
-    AWAITING_INPUT.pop(message.from_user.id, None)
-    await render_block(bot, message.chat.id, message.from_user.id, SCENARIO["start"], replace=False)
-
-
-# Callback handler для кнопок сценария (block:<next_block_id>)
-@dp.callback_query(F.data.startswith("block:"))
-async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
-    touch(callback.from_user.id)
-    AWAITING_INPUT.pop(callback.from_user.id, None)
-    next_block_id = callback.data.removeprefix("block:")
-    await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
-    await callback.answer()
-
-
-# Защита от произвольного текста: если юзер написал что-то своё вместо
-# нажатия кнопки, просто направляем его обратно в главное меню.
-# Исключение — если бот ждёт от него конкретный ввод (блок "input").
-@dp.message()
-async def fallback_text_handler(message: Message, bot: Bot) -> None:
-    user_id = message.from_user.id
-    touch(user_id)
-
-    pending = AWAITING_INPUT.pop(user_id, None)
-    if pending:
-        USER_DATA.setdefault(user_id, {})[pending["save_as"]] = message.text
-        await render_block(bot, message.chat.id, user_id, pending["next"], replace=False)
-        return
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="В меню", callback_data="block:general_menu")]
-    ])
-    sent = await bot.send_message(message.chat.id, "Для возврата в главное меню нажмите ⬇️", reply_markup=keyboard)
-    LAST_BOT_MESSAGE[user_id] = sent
-
-
-# Run the bot
-async def main() -> None:
-    bot = Bot(token=TOKEN)
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

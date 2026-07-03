@@ -55,7 +55,7 @@
         {"text": "до 25 тыс.р", "next": "consultation_to_twenty-five"},
         {"text": "25-150 тыс.р", "next": "consultation_recommend_mfc_to_one-hundred-fifty"},
         {"text": "150-300 тыс.р", "next": "consultation_to_three-hundred"},
-        {"text": "более 300 тыс.р", "next": "consultation_before_three-hundred"}
+        {"text": "более 300 тыс.р", "next": "consultation_to_three-hundred"}
       ]
     },
     "consultation_to_twenty-five": {
@@ -117,7 +117,7 @@
     "consultation_add_phone": {
       "type": "input",
       "text": "Введите свой контактный номер телефона в сообщении☺️\n\nЕсли хотите вернуться назад, нажмите «меню»",
-      "save_as": "tg_account",
+      "save_as": "phone",
       "buttons": [
         {"text": "В меню", "next": "general_menu"}
       ],
