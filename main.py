@@ -12,6 +12,8 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     FSInputFile,
+    InputMediaDocument,
+    InputMediaPhoto,
 )
 from aiogram.filters import Command
 
@@ -21,7 +23,7 @@ TOKEN = getenv("BOT_TOKEN")
 
 dp = Dispatcher()
 
-TEST_DATA_DIR = Path(__file__).parent / "test_data"
+TEST_DATA_DIR = Path(__file__).parent / "data"
 FILES_DIR = TEST_DATA_DIR / "files"
 
 with open(TEST_DATA_DIR / "scenario.json", "r", encoding="utf-8") as f:
@@ -41,6 +43,10 @@ LAST_BOT_MESSAGE: dict[int, Message] = {}
 # Пауза перед автопереходом (auto_next), чтобы сообщения цепочки не сыпались разом.
 AUTO_NEXT_DELAY_SECONDS = 1.5
 
+# Файлы с такими расширениями шлём как фото (send_photo), а не как документ —
+# тогда в чате показывается превью картинки, а не иконка файла.
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
 
 def touch(user_id: int) -> int:
     USER_ACTIVITY[user_id] = USER_ACTIVITY.get(user_id, 0) + 1
@@ -59,6 +65,27 @@ def build_keyboard(buttons: list[dict]) -> InlineKeyboardMarkup | None:
 async def is_subscribed(bot: Bot, channel: str, user_id: int) -> bool:
     member = await bot.get_chat_member(chat_id=channel, user_id=user_id)
     return member.status not in ("left", "kicked")
+
+
+async def send_file(bot: Bot, chat_id: int, file_path: Path) -> None:
+    if file_path.suffix.lower() in IMAGE_EXTENSIONS:
+        await bot.send_photo(chat_id, FSInputFile(file_path))
+    else:
+        await bot.send_document(chat_id, FSInputFile(file_path))
+
+
+async def send_file_with_caption(
+    bot: Bot, chat_id: int, file_path: Path, caption: str, keyboard: InlineKeyboardMarkup | None
+) -> Message:
+    if file_path.suffix.lower() in IMAGE_EXTENSIONS:
+        return await bot.send_photo(chat_id, FSInputFile(file_path), caption=caption, reply_markup=keyboard)
+    return await bot.send_document(chat_id, FSInputFile(file_path), caption=caption, reply_markup=keyboard)
+
+
+def build_media(file_path: Path, caption: str | None = None) -> InputMediaDocument | InputMediaPhoto:
+    if file_path.suffix.lower() in IMAGE_EXTENSIONS:
+        return InputMediaPhoto(media=FSInputFile(file_path), caption=caption)
+    return InputMediaDocument(media=FSInputFile(file_path), caption=caption)
 
 
 async def show_text(
@@ -111,12 +138,20 @@ async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, repl
         missing = [name for name in file_names if not (FILES_DIR / name).exists()]
         if missing:
             missing_list = ", ".join(missing)
-            text = f"{block['text']}\n\n[файлы ещё не загружены в test_data/files: {missing_list}]"
+            text = f"{block['text']}\n\n[файлы ещё не загружены в data/files: {missing_list}]"
             await show_text(bot, chat_id, user_id, text, keyboard, should_replace)
+        elif len(file_names) > 1 and keyboard is None:
+            # Кнопок нет — можно собрать все файлы в один альбом (Telegram не даёт
+            # кнопки на альбомах, но раз их и не должно быть, это не проблема).
+            media = [build_media(FILES_DIR / file_names[0], caption=block["text"])]
+            media += [build_media(FILES_DIR / name) for name in file_names[1:]]
+            sent_messages = await bot.send_media_group(chat_id, media)
+            LAST_BOT_MESSAGE[user_id] = sent_messages[0]
         else:
-            await show_text(bot, chat_id, user_id, block["text"], keyboard, should_replace)
-            for name in file_names:
-                await bot.send_document(chat_id, FSInputFile(FILES_DIR / name))
+            sent = await send_file_with_caption(bot, chat_id, FILES_DIR / file_names[0], block["text"], keyboard)
+            LAST_BOT_MESSAGE[user_id] = sent
+            for name in file_names[1:]:
+                await send_file(bot, chat_id, FILES_DIR / name)
 
     if block.get("auto_next"):
         # auto_next — следующее звено той же цепочки сообщений, а не переход
