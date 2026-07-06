@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 import bot_client
@@ -33,5 +34,10 @@ app.include_router(tags_router, dependencies=[Depends(require_auth)])
 app.include_router(users_router, dependencies=[Depends(require_auth)])
 app.include_router(scenario_router, dependencies=[Depends(require_auth)])
 app.include_router(broadcast_router, dependencies=[Depends(require_auth)])
+
+@app.get("/login")
+async def login_page():
+    return FileResponse(FRONTEND_DIR / "login.html")
+
 
 app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

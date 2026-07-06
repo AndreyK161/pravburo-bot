@@ -2,7 +2,7 @@ const originalFetch = window.fetch;
 window.fetch = async (...args) => {
   const res = await originalFetch(...args);
   if (res.status === 401 && !args[0].toString().includes("/api/auth/")) {
-    window.location.href = "/login.html";
+    window.location.href = "/login";
   }
   return res;
 };
@@ -15,12 +15,12 @@ export async function requireLogin() {
     document.getElementById("currentUsername").textContent = data.username;
     return true;
   } catch {
-    window.location.href = "/login.html";
+    window.location.href = "/login";
     return false;
   }
 }
 
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await fetch("/api/auth/logout", { method: "POST" });
-  window.location.href = "/login.html";
+  window.location.href = "/login";
 });
