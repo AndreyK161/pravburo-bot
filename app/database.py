@@ -7,22 +7,10 @@ DB_POOL: asyncpg.Pool | None = None
 
 
 async def init_db_pool() -> None:
+    # Схема БД (users, tags, ...) управляется alembic-миграциями из admin/backend,
+    # бот только открывает пул и ожидает, что таблицы уже созданы.
     global DB_POOL
     DB_POOL = await asyncpg.create_pool(DATABASE_URL)
-    async with DB_POOL.acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                user_id BIGINT PRIMARY KEY,
-                chat_id BIGINT NOT NULL,
-                username TEXT,
-                name TEXT,
-                phone TEXT,
-                region TEXT,
-                source TEXT,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-        """)
 
 
 async def upsert_user(user_id: int, chat_id: int, username: str | None, source: str | None = None) -> None:
