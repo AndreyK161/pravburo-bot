@@ -48,3 +48,17 @@ async def set_tag_by_name(user_id: int, tag_name: str) -> None:
             tag_name,
             user_id,
         )
+
+
+async def set_tag_by_name_if_untagged(user_id: int, tag_name: str) -> None:
+    # Ставим тег только тому, у кого тега ещё нет вообще — чтобы не затирать
+    # ни ручной тег админа, ни уже пройденную консультацию.
+    async with DB_POOL.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE users SET tag_id = (SELECT id FROM tags WHERE name = $1), updated_at = now()
+            WHERE user_id = $2 AND tag_id IS NULL
+            """,
+            tag_name,
+            user_id,
+        )
