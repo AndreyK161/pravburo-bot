@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админка Правбюро</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen">
+
+<header class="bg-white border-b">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <h1 class="text-lg font-semibold">Админка Правбюро</h1>
+    <nav class="flex gap-2">
+      <button data-tab="stats" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Статистика</button>
+      <button data-tab="users" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Пользователи</button>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <section id="tab-stats" class="space-y-6">
+    <div class="bg-white rounded-lg shadow-sm border p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Пользователи по source</h2>
+        <div class="flex items-center gap-2 text-xs">
+          <button id="sourcesSelectAll" class="text-blue-600 hover:underline">Выбрать все</button>
+          <span class="text-gray-300">|</span>
+          <button id="sourcesSelectNone" class="text-blue-600 hover:underline">Снять все</button>
+        </div>
+      </div>
+      <div id="sourcesCheckboxes" class="flex flex-wrap gap-x-4 gap-y-1 mb-4 text-sm"></div>
+      <canvas id="sourcesChart" height="90"></canvas>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border p-4">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-500 border-b">
+            <th class="py-2">Source</th>
+            <th class="py-2">Кол-во пользователей</th>
+          </tr>
+        </thead>
+        <tbody id="sourcesTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="tab-users" class="hidden space-y-4">
+    <div class="bg-white rounded-lg shadow-sm border p-4 flex flex-wrap items-center gap-3">
+      <label class="text-sm text-gray-600">Фильтр:</label>
+      <select id="userSearchField" class="border rounded-md px-2 py-1 text-sm">
+        <option value="name">Имя</option>
+        <option value="username">Username</option>
+        <option value="phone">Телефон</option>
+        <option value="region">Регион</option>
+        <option value="source">Source</option>
+        <option value="user_id">ID</option>
+      </select>
+      <input id="userSearch" type="text" placeholder="Значение..." class="border rounded-md px-2 py-1 text-sm w-56">
+
+      <label class="text-sm text-gray-600">Тег:</label>
+      <select id="tagFilter" class="border rounded-md px-2 py-1 text-sm">
+        <option value="">Все</option>
+      </select>
+
+      <div class="ml-auto flex items-center gap-2">
+        <input id="newTagName" type="text" placeholder="Новый тег" class="border rounded-md px-2 py-1 text-sm">
+        <button id="createTagBtn" class="bg-gray-900 text-white text-sm px-3 py-1.5 rounded-md">Создать тег</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border overflow-x-auto">
+      <table class="w-full text-sm whitespace-nowrap">
+        <thead>
+          <tr class="text-left text-gray-500 border-b">
+            <th class="py-2 px-3">ID</th>
+            <th class="py-2 px-3">Username</th>
+            <th class="py-2 px-3">Имя</th>
+            <th class="py-2 px-3">Телефон</th>
+            <th class="py-2 px-3">Регион</th>
+            <th class="py-2 px-3">Source</th>
+            <th class="py-2 px-3">Тег</th>
+            <th class="py-2 px-3">Создан</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="flex items-center justify-between text-sm text-gray-600">
+      <span id="usersRangeLabel"></span>
+      <div class="flex items-center gap-2">
+        <button id="prevPageBtn" class="border rounded-md px-3 py-1 disabled:opacity-40">Назад</button>
+        <span id="pageLabel"></span>
+        <button id="nextPageBtn" class="border rounded-md px-3 py-1 disabled:opacity-40">Вперёд</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
