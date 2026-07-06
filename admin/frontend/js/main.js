@@ -2,6 +2,7 @@ import { loadStats } from "./stats.js";
 import { loadTagFilter, loadUsers } from "./users.js";
 import { loadBroadcastTags } from "./broadcast.js";
 import { loadScenario } from "./scenario.js";
+import { requireLogin } from "./auth.js";
 
 const tabButtons = document.querySelectorAll(".tab-btn");
 const tabs = {
@@ -29,4 +30,6 @@ function activateTab(name) {
 
 tabButtons.forEach((btn) => btn.addEventListener("click", () => activateTab(btn.dataset.tab)));
 
-activateTab("stats");
+requireLogin().then((ok) => {
+  if (ok) activateTab("stats");
+});

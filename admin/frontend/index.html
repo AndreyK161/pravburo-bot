@@ -12,11 +12,13 @@
 <header class="bg-white border-b">
   <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
     <h1 class="text-lg font-semibold">Админка Правбюро</h1>
-    <nav class="flex gap-2">
+    <nav class="flex items-center gap-2">
       <button data-tab="stats" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Статистика</button>
       <button data-tab="users" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Пользователи</button>
       <button data-tab="broadcast" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Рассылки</button>
       <button data-tab="scenario" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Сценарий</button>
+      <span id="currentUsername" class="text-sm text-gray-400 ml-3"></span>
+      <button id="logoutBtn" class="text-sm text-red-600 px-2">Выйти</button>
     </nav>
   </div>
 </header>

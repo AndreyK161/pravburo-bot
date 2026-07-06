@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вход — Админка Правбюро</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen flex items-center justify-center">
+
+<form id="loginForm" class="bg-white rounded-lg shadow-sm border p-6 w-full max-w-sm space-y-4">
+  <h1 class="text-lg font-semibold text-center">Админка Правбюро</h1>
+
+  <div>
+    <label class="text-sm text-gray-600 block mb-1">Логин</label>
+    <input id="username" type="text" autocomplete="username" class="border rounded-md px-2 py-1.5 text-sm w-full">
+  </div>
+
+  <div>
+    <label class="text-sm text-gray-600 block mb-1">Пароль</label>
+    <input id="password" type="password" autocomplete="current-password" class="border rounded-md px-2 py-1.5 text-sm w-full">
+  </div>
+
+  <button type="submit" class="bg-gray-900 text-white text-sm px-4 py-2 rounded-md w-full">Войти</button>
+
+  <div id="loginError" class="text-sm text-red-600 text-center"></div>
+</form>
+
+<script type="module">
+  const form = document.getElementById("loginForm");
+  const errorEl = document.getElementById("loginError");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl.textContent = "";
+
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errorEl.textContent = data.detail ?? "Не удалось войти";
+        return;
+      }
+      window.location.href = "/index.html";
+    } catch {
+      errorEl.textContent = "Ошибка сети";
+    }
+  });
+</script>
+</body>
+</html>

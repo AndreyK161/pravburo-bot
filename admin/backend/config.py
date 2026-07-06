@@ -10,6 +10,13 @@ BOT_TOKEN = getenv("BOT_TOKEN")
 
 BROADCAST_DELAY_SECONDS = 0.05
 
+SESSION_SECRET_KEY = getenv("SESSION_SECRET_KEY")
+SESSION_COOKIE_NAME = "admin_session"
+SESSION_MAX_AGE_SECONDS = 60 * 60 * 12  # 12 часов
+# Cookie должна быть Secure только когда сайт реально отдаётся по HTTPS -
+# иначе браузер её просто не отправит и логин будет всегда падать.
+SESSION_COOKIE_SECURE = getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+
 BASE_DIR = Path(__file__).parent.parent.parent  # bot_pravburo/admin/backend -> bot_pravburo
 DATA_DIR = BASE_DIR / "data"
 SCENARIO_PATH = DATA_DIR / "scenario.json"
