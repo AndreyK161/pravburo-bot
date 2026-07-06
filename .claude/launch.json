@@ -4,8 +4,8 @@
     {
       "name": "admin-backend",
       "runtimeExecutable": "admin/backend/.venv/bin/uvicorn",
-      "runtimeArgs": ["main:app", "--reload", "--port", "8123", "--app-dir", "admin/backend"],
-      "port": 8123
+      "runtimeArgs": ["main:app", "--reload", "--port", "8199", "--app-dir", "admin/backend"],
+      "port": 8199
     }
   ]
 }

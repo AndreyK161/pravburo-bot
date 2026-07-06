@@ -11,3 +11,15 @@ export async function createTag(name) {
     body: JSON.stringify({ name }),
   });
 }
+
+export async function updateTag(id, name) {
+  return fetch(`/api/tags/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function deleteTag(id) {
+  return fetch(`/api/tags/${id}`, { method: "DELETE" });
+}

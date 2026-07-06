@@ -1,5 +1,5 @@
 import { escapeHtml } from "./utils.js";
-import { fetchTags, createTag } from "./tags.js";
+import { fetchTags } from "./tags.js";
 import { showToast } from "./toast.js";
 
 const PAGE_SIZE = 20;
@@ -132,23 +132,3 @@ document.getElementById("nextPageBtn").addEventListener("click", () => {
   loadUsers();
 });
 
-document.getElementById("createTagBtn").addEventListener("click", async () => {
-  const input = document.getElementById("newTagName");
-  const name = input.value.trim();
-  if (!name) return;
-
-  try {
-    const res = await createTag(name);
-    if (res.ok) {
-      input.value = "";
-      showToast("Тег создан", "success");
-      await loadTagFilter();
-      await loadUsers();
-    } else {
-      const err = await res.json();
-      showToast(err.detail ?? "Не удалось создать тег");
-    }
-  } catch {
-    showToast("Не удалось создать тег: ошибка сети");
-  }
-});

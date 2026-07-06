@@ -15,6 +15,7 @@
     <nav class="flex items-center gap-2">
       <button data-tab="stats" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Статистика</button>
       <button data-tab="users" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Пользователи</button>
+      <button data-tab="tags" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Теги</button>
       <button data-tab="broadcast" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Рассылки</button>
       <button data-tab="scenario" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Сценарий</button>
       <span id="currentUsername" class="text-sm text-gray-400 ml-3"></span>
@@ -70,10 +71,6 @@
         <option value="">Все</option>
       </select>
 
-      <div class="ml-auto flex items-center gap-2">
-        <input id="newTagName" type="text" placeholder="Новый тег" class="border rounded-md px-2 py-1 text-sm">
-        <button id="createTagBtn" class="bg-gray-900 text-white text-sm px-3 py-1.5 rounded-md">Создать тег</button>
-      </div>
     </div>
 
     <div class="bg-white rounded-lg shadow-sm border overflow-x-auto">
@@ -101,6 +98,26 @@
         <span id="pageLabel"></span>
         <button id="nextPageBtn" class="border rounded-md px-3 py-1 disabled:opacity-40">Вперёд</button>
       </div>
+    </div>
+  </section>
+
+  <section id="tab-tags" class="hidden space-y-4">
+    <div class="bg-white rounded-lg shadow-sm border p-4 flex items-center gap-2">
+      <input id="newTagName" type="text" placeholder="Новый тег" maxlength="32" class="border rounded-md px-2 py-1 text-sm w-64">
+      <button id="createTagBtn" class="bg-gray-900 text-white text-sm px-3 py-1.5 rounded-md">Создать</button>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-500 border-b">
+            <th class="py-2 px-3">Название</th>
+            <th class="py-2 px-3">Создан</th>
+            <th class="py-2 px-3"></th>
+          </tr>
+        </thead>
+        <tbody id="tagsTableBody"></tbody>
+      </table>
     </div>
   </section>
 
@@ -144,15 +161,12 @@
             <input id="fieldBlockId" type="text" class="border rounded-md px-2 py-1 text-sm w-full">
           </div>
           <div>
-            <label class="text-sm text-gray-600 block mb-1">Название (для списка)</label>
-            <input id="fieldBlockName" type="text" class="border rounded-md px-2 py-1 text-sm w-full" placeholder="Необязательно, для удобства">
-          </div>
-          <div>
-            <label class="text-sm text-gray-600 block mb-1">Тип <span class="text-red-600">*</span></label>
-            <select id="fieldType" class="border rounded-md px-2 py-1 text-sm w-full"></select>
+            <label class="text-sm text-gray-600 block mb-1">JSON блока <span class="text-red-600">*</span></label>
+            <textarea id="fieldBlockJson" rows="18" spellcheck="false"
+                      class="border rounded-md px-2 py-1.5 text-sm w-full font-mono"></textarea>
           </div>
 
-          <div id="dynamicFields" class="space-y-3"></div>
+          <div id="scenarioMetaHint" class="text-xs text-gray-500 bg-gray-50 border rounded-md p-3 space-y-1"></div>
 
           <div class="flex gap-2 pt-2">
             <button type="submit" class="bg-gray-900 text-white text-sm px-4 py-2 rounded-md">Сохранить</button>

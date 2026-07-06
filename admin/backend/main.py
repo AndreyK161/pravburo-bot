@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 import bot_client
 import database
-from routes.routes_auth import router as auth_router, require_auth
+from routes.routes_auth import router as auth_router, require_auth, require_role
 from routes.routes_stats import router as stats_router
 from routes.routes_tags import router as tags_router
 from routes.routes_users import router as users_router
@@ -32,7 +32,7 @@ app.include_router(auth_router)
 app.include_router(stats_router, dependencies=[Depends(require_auth)])
 app.include_router(tags_router, dependencies=[Depends(require_auth)])
 app.include_router(users_router, dependencies=[Depends(require_auth)])
-app.include_router(scenario_router, dependencies=[Depends(require_auth)])
+app.include_router(scenario_router, dependencies=[Depends(require_role("admin"))])
 app.include_router(broadcast_router, dependencies=[Depends(require_auth)])
 
 @app.get("/login")

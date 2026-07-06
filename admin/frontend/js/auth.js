@@ -7,12 +7,15 @@ window.fetch = async (...args) => {
   return res;
 };
 
+export let currentRole = null;
+
 export async function requireLogin() {
   try {
     const res = await fetch("/api/auth/me");
     if (!res.ok) throw new Error("not authenticated");
     const data = await res.json();
     document.getElementById("currentUsername").textContent = data.username;
+    currentRole = data.role;
     return true;
   } catch {
     window.location.href = "/login";

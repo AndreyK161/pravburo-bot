@@ -14,8 +14,8 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode(), password_hash.encode())
 
 
-def create_session_token(admin_user_id: int, username: str) -> str:
-    return _serializer.dumps({"admin_user_id": admin_user_id, "username": username})
+def create_session_token(admin_user_id: int, username: str, role: str) -> str:
+    return _serializer.dumps({"admin_user_id": admin_user_id, "username": username, "role": role})
 
 
 def read_session_token(token: str) -> dict | None:

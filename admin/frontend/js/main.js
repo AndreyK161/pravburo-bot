@@ -1,13 +1,15 @@
 import { loadStats } from "./stats.js";
 import { loadTagFilter, loadUsers } from "./users.js";
+import { loadTagsPage } from "./tags-page.js";
 import { loadBroadcastTags } from "./broadcast.js";
 import { loadScenario } from "./scenario.js";
-import { requireLogin } from "./auth.js";
+import { requireLogin, currentRole } from "./auth.js";
 
 const tabButtons = document.querySelectorAll(".tab-btn");
 const tabs = {
   stats: document.getElementById("tab-stats"),
   users: document.getElementById("tab-users"),
+  tags: document.getElementById("tab-tags"),
   broadcast: document.getElementById("tab-broadcast"),
   scenario: document.getElementById("tab-scenario"),
 };
@@ -24,6 +26,7 @@ function activateTab(name) {
   });
   if (name === "stats") loadStats();
   if (name === "users") loadTagFilter().then(loadUsers);
+  if (name === "tags") loadTagsPage();
   if (name === "broadcast") loadBroadcastTags();
   if (name === "scenario") loadScenario();
 }
@@ -31,5 +34,9 @@ function activateTab(name) {
 tabButtons.forEach((btn) => btn.addEventListener("click", () => activateTab(btn.dataset.tab)));
 
 requireLogin().then((ok) => {
-  if (ok) activateTab("stats");
+  if (!ok) return;
+  if (currentRole !== "admin") {
+    document.querySelector('[data-tab="scenario"]').classList.add("hidden");
+  }
+  activateTab("stats");
 });

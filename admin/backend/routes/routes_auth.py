@@ -17,9 +17,18 @@ async def require_auth(session: str | None = Cookie(default=None, alias=SESSION_
     if not session:
         raise HTTPException(status_code=401, detail="Требуется авторизация")
     payload = read_session_token(session)
-    if not payload:
+    if not payload or "role" not in payload:
         raise HTTPException(status_code=401, detail="Сессия истекла, войдите заново")
     return payload
+
+
+def require_role(*allowed_roles: str):
+    async def checker(payload: dict = Depends(require_auth)) -> dict:
+        if payload.get("role") not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Недостаточно прав")
+        return payload
+
+    return checker
 
 
 @router.post("/login")
@@ -29,7 +38,7 @@ async def login(body: LoginIn, request: Request, response: Response):
 
     async with database.DB_POOL.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, username, password_hash FROM admin_users WHERE username = $1", body.username
+            "SELECT id, username, password_hash, role FROM admin_users WHERE username = $1", body.username
         )
         success = bool(row) and verify_password(body.password, row["password_hash"])
 
@@ -48,7 +57,7 @@ async def login(body: LoginIn, request: Request, response: Response):
     if not success:
         raise HTTPException(status_code=401, detail="Неверный логин или пароль")
 
-    token = create_session_token(row["id"], row["username"])
+    token = create_session_token(row["id"], row["username"], row["role"])
     response.set_cookie(
         SESSION_COOKIE_NAME,
         token,
@@ -57,7 +66,7 @@ async def login(body: LoginIn, request: Request, response: Response):
         secure=SESSION_COOKIE_SECURE,
         samesite="lax",
     )
-    return {"ok": True, "username": row["username"]}
+    return {"ok": True, "username": row["username"], "role": row["role"]}
 
 
 @router.post("/logout")
@@ -68,4 +77,4 @@ async def logout(response: Response):
 
 @router.get("/me")
 async def me(payload: dict = Depends(require_auth)):
-    return {"username": payload["username"]}
+    return {"username": payload["username"], "role": payload["role"]}
