@@ -29,3 +29,22 @@ async def save_user_field(user_id: int, field: str, value: str) -> None:
         return
     async with DB_POOL.acquire() as conn:
         await conn.execute(f"UPDATE users SET {field} = $1, updated_at = now() WHERE user_id = $2", value, user_id)
+
+
+async def update_current_stage(user_id: int, block_id: str) -> None:
+    async with DB_POOL.acquire() as conn:
+        await conn.execute(
+            "UPDATE users SET current_stage = $1, updated_at = now() WHERE user_id = $2", block_id, user_id
+        )
+
+
+async def set_tag_by_name(user_id: int, tag_name: str) -> None:
+    async with DB_POOL.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE users SET tag_id = (SELECT id FROM tags WHERE name = $1), updated_at = now()
+            WHERE user_id = $2
+            """,
+            tag_name,
+            user_id,
+        )

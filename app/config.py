@@ -27,3 +27,10 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 # save_as из input-блоков, которым разрешено писаться в свою колонку users.
 # Белый список нужен, чтобы имя поля из JSON нельзя было подставить в SQL как есть.
 USER_FIELD_COLUMNS = {"name", "phone", "region"}
+
+# id блоков сценария, отмечающих начало и успешное завершение консультации.
+# Если блок в scenario.json переименуют, эти константы нужно поправить вручную.
+CONSULTATION_START_BLOCK = "consultation"
+CONSULTATION_DONE_BLOCK = "consultation_contact"
+TAG_CONSULTATION_STARTED = "Консультация: нет"
+TAG_CONSULTATION_DONE = "Консультация: да"

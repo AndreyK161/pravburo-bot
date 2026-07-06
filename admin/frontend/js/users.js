@@ -64,6 +64,7 @@ export async function loadUsers() {
         <td class="py-2 px-3">${escapeHtml(u.phone ?? "")}</td>
         <td class="py-2 px-3">${escapeHtml(u.region ?? "")}</td>
         <td class="py-2 px-3">${escapeHtml(u.source ?? "")}</td>
+        <td class="py-2 px-3 max-w-[160px] truncate" title="${escapeHtml(u.current_stage ?? "")}">${escapeHtml(u.current_stage ?? "")}</td>
         <td class="py-2 px-3">${tagSelectHtml(u.tag_id)}</td>
         <td class="py-2 px-3">${new Date(u.created_at).toLocaleString("ru-RU")}</td>
       </tr>`

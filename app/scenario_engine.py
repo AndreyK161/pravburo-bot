@@ -6,7 +6,18 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
-from config import AUTO_NEXT_DELAY_SECONDS, FILES_DIR, IMAGE_EXTENSIONS, NEVER_REPLACE_BLOCK, SCENARIO_PATH
+from config import (
+    AUTO_NEXT_DELAY_SECONDS,
+    CONSULTATION_DONE_BLOCK,
+    CONSULTATION_START_BLOCK,
+    FILES_DIR,
+    IMAGE_EXTENSIONS,
+    NEVER_REPLACE_BLOCK,
+    SCENARIO_PATH,
+    TAG_CONSULTATION_DONE,
+    TAG_CONSULTATION_STARTED,
+)
+from database import set_tag_by_name, update_current_stage
 from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_ACTIVITY
 
 with open(SCENARIO_PATH, "r", encoding="utf-8") as f:
@@ -79,6 +90,12 @@ async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, repl
 
         asyncio.create_task(wait_and_continue())
         return
+
+    await update_current_stage(user_id, block_id)
+    if block_id == CONSULTATION_START_BLOCK:
+        await set_tag_by_name(user_id, TAG_CONSULTATION_STARTED)
+    elif block_id == CONSULTATION_DONE_BLOCK:
+        await set_tag_by_name(user_id, TAG_CONSULTATION_DONE)
 
     keyboard = build_keyboard(block.get("buttons", []))
     prior_message = LAST_BOT_MESSAGE.get(user_id)
