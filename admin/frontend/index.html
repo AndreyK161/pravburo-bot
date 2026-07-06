@@ -15,6 +15,8 @@
     <nav class="flex gap-2">
       <button data-tab="stats" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Статистика</button>
       <button data-tab="users" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Пользователи</button>
+      <button data-tab="broadcast" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Рассылки</button>
+      <button data-tab="scenario" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Сценарий</button>
     </nav>
   </div>
 </header>
@@ -100,8 +102,77 @@
     </div>
   </section>
 
+  <section id="tab-broadcast" class="hidden space-y-4">
+    <div class="bg-white rounded-lg shadow-sm border p-4 space-y-3 max-w-2xl">
+      <div>
+        <label class="text-sm text-gray-600 block mb-1">Кому:</label>
+        <select id="broadcastTag" class="border rounded-md px-2 py-1 text-sm w-full">
+          <option value="">Всем пользователям</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm text-gray-600 block mb-1">Текст сообщения:</label>
+        <textarea id="broadcastText" rows="6" class="border rounded-md px-2 py-1.5 text-sm w-full"
+                  placeholder="Текст рассылки..."></textarea>
+      </div>
+
+      <button id="broadcastSendBtn" class="bg-gray-900 text-white text-sm px-4 py-2 rounded-md">Отправить рассылку</button>
+
+      <div id="broadcastResult" class="text-sm"></div>
+    </div>
+  </section>
+
+  <section id="tab-scenario" class="hidden">
+    <div class="grid grid-cols-3 gap-4 items-start">
+      <div class="bg-white rounded-lg shadow-sm border p-4 col-span-1">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold">Блоки сценария</h2>
+          <button id="newBlockBtn" class="text-sm bg-gray-900 text-white px-2 py-1 rounded-md">+ Новый</button>
+        </div>
+        <input id="blockSearch" type="text" placeholder="Поиск по id..." class="border rounded-md px-2 py-1 text-sm w-full mb-2">
+        <div id="blockList" class="space-y-1 max-h-[70vh] overflow-y-auto text-sm"></div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border p-4 col-span-2">
+        <div id="blockEditorEmpty" class="text-sm text-gray-500">Выберите блок слева или создайте новый.</div>
+        <form id="blockEditorForm" class="hidden space-y-3">
+          <div>
+            <label class="text-sm text-gray-600 block mb-1">ID блока <span class="text-red-600">*</span></label>
+            <input id="fieldBlockId" type="text" class="border rounded-md px-2 py-1 text-sm w-full">
+          </div>
+          <div>
+            <label class="text-sm text-gray-600 block mb-1">Название (для списка)</label>
+            <input id="fieldBlockName" type="text" class="border rounded-md px-2 py-1 text-sm w-full" placeholder="Необязательно, для удобства">
+          </div>
+          <div>
+            <label class="text-sm text-gray-600 block mb-1">Тип <span class="text-red-600">*</span></label>
+            <select id="fieldType" class="border rounded-md px-2 py-1 text-sm w-full"></select>
+          </div>
+
+          <div id="dynamicFields" class="space-y-3"></div>
+
+          <div class="flex gap-2 pt-2">
+            <button type="submit" class="bg-gray-900 text-white text-sm px-4 py-2 rounded-md">Сохранить</button>
+            <button type="button" id="cancelEditBtn" class="border text-sm px-4 py-2 rounded-md">Отмена</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
 </main>
 
-<script src="app.js"></script>
+<div id="confirmModalOverlay" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-40 transition-opacity duration-200 opacity-0">
+  <div id="confirmModalBox" class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 transition-all duration-200 opacity-0 scale-95">
+    <p id="confirmModalMessage" class="text-sm text-gray-800 whitespace-pre-line mb-5"></p>
+    <div class="flex justify-end gap-2">
+      <button id="confirmModalCancel" class="px-3 py-1.5 rounded-md text-sm border">Отмена</button>
+      <button id="confirmModalConfirm" class="px-3 py-1.5 rounded-md text-sm bg-gray-900 text-white">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>

@@ -42,7 +42,7 @@ async def list_users(
     if field and value:
         column = FILTERABLE_FIELDS.get(field)
         if not column:
-            raise HTTPException(status_code=422, detail=f"Unknown filter field: {field}")
+            raise HTTPException(status_code=422, detail=f"Неизвестное поле для фильтра: {field}")
         params.append(f"%{value}%")
         conditions.append(f"{column} ILIKE ${len(params)}")
 
@@ -83,11 +83,11 @@ async def assign_tag(user_id: int, body: TagAssignIn):
         if body.tag_id is not None:
             tag = await conn.fetchrow("SELECT id FROM tags WHERE id = $1", body.tag_id)
             if not tag:
-                raise HTTPException(status_code=404, detail="Tag not found")
+                raise HTTPException(status_code=404, detail="Тег не найден")
         result = await conn.execute(
             "UPDATE users SET tag_id = $1, updated_at = now() WHERE user_id = $2",
             body.tag_id, user_id,
         )
     if result == "UPDATE 0":
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
     return {"ok": True}
