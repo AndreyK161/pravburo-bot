@@ -5,10 +5,10 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 import database
-from routes_stats import router as stats_router
-from routes_tags import router as tags_router
-from routes_users import router as users_router
-from routes_scenario import router as scenario_router
+from routes.routes_stats import router as stats_router
+from routes.routes_tags import router as tags_router
+from routes.routes_users import router as users_router
+from routes.routes_scenario import router as scenario_router
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
