@@ -12,6 +12,7 @@ from routes.routes_stats import router as stats_router
 from routes.routes_tags import router as tags_router
 from routes.routes_users import router as users_router
 from routes.routes_scenario import router as scenario_router
+from routes.routes_scenario_graph import router as scenario_graph_router
 from routes.routes_broadcast import router as broadcast_router
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -33,6 +34,7 @@ app.include_router(stats_router, dependencies=[Depends(require_auth)])
 app.include_router(tags_router, dependencies=[Depends(require_auth)])
 app.include_router(users_router, dependencies=[Depends(require_auth)])
 app.include_router(scenario_router, dependencies=[Depends(require_role("admin"))])
+app.include_router(scenario_graph_router, dependencies=[Depends(require_auth)])
 app.include_router(broadcast_router, dependencies=[Depends(require_auth)])
 
 @app.get("/login")

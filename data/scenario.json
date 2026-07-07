@@ -120,7 +120,7 @@
         },
         {
           "text": "Есть еще",
-          "next": "consultation_to_twenty-five"
+          "next": "consultation_menu_add"
         }
       ],
       "name": "Долг до 25 тыс — уточнение состава долга"

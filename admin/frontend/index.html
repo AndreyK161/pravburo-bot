@@ -6,6 +6,7 @@
 <title>Админка Правбюро</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://unpkg.com/vis-network@9/standalone/umd/vis-network.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100 text-gray-900 min-h-screen">
@@ -20,6 +21,7 @@
         <button data-tab="users" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Пользователи</button>
         <button data-tab="tags" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Теги</button>
         <button data-tab="broadcast" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Рассылки</button>
+        <button data-tab="graph" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Граф сценария</button>
         <button data-tab="scenario" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Сценарий</button>
         <button id="logoutBtn" class="logout-btn text-sm text-red-600 px-2">Выйти</button>
       </nav>
@@ -39,6 +41,7 @@
       <button data-tab="users" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Пользователи</button>
       <button data-tab="tags" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Теги</button>
       <button data-tab="broadcast" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Рассылки</button>
+      <button data-tab="graph" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Граф сценария</button>
       <button data-tab="scenario" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Сценарий</button>
       <button id="mobileLogoutBtn" class="logout-btn text-sm text-red-600 px-3 py-2.5 text-left border-t mt-1 pt-3">Выйти</button>
     </div>
@@ -161,6 +164,20 @@
       <button id="broadcastSendBtn" class="bg-gray-900 text-white text-sm px-4 py-2 rounded-md">Отправить рассылку</button>
 
       <div id="broadcastResult" class="text-sm"></div>
+    </div>
+  </section>
+
+  <section id="tab-graph" class="hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+      <div class="bg-white rounded-lg shadow-sm border p-2 lg:col-span-2">
+        <div id="scenarioGraphLegend" class="flex flex-wrap gap-3 text-xs text-gray-600 px-2 pt-2 pb-1"></div>
+        <div id="scenarioGraph" class="w-full h-[70vh] rounded-md"></div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm border p-4 lg:col-span-1 lg:sticky lg:top-4 max-h-[75vh] overflow-y-auto overflow-x-hidden">
+        <div id="graphDetailEmpty" class="text-sm text-gray-500">Нажмите на звено графа, чтобы посмотреть подробности.</div>
+        <div id="graphDetailContent" class="hidden space-y-3 text-sm break-words min-w-0"></div>
+      </div>
     </div>
   </section>
 

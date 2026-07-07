@@ -21,6 +21,7 @@ BASE_DIR = Path(__file__).parent.parent.parent  # bot_pravburo/admin/backend -> 
 DATA_DIR = BASE_DIR / "data"
 SCENARIO_PATH = DATA_DIR / "scenario.json"
 SCENARIO_BACKUP_DIR = DATA_DIR / "scenario_backups"
+SCENARIO_GRAPH_POSITIONS_PATH = DATA_DIR / "scenario_graph_positions.json"
 FILES_DIR = DATA_DIR / "files"
 
 # Должно совпадать с app/config.py (USER_FIELD_COLUMNS) и app/validators.py (VALIDATORS)
@@ -36,3 +37,10 @@ BLOCK_REQUIRED_FIELDS = {
     "condition": ["channel", "yes", "no"],
     "delay": ["seconds", "next"],
 }
+
+# Должно совпадать с app/config.py — id блоков, при входе в которые бот
+# автоматически проставляет юзеру тег (используется страницей графа сценария).
+CONSULTATION_START_BLOCK = "consultation"
+CONSULTATION_DONE_BLOCK = "consultation_contact"
+TAG_CONSULTATION_STARTED = "Консультация: нет"
+TAG_CONSULTATION_DONE = "Консультация: да"

@@ -3,6 +3,7 @@ import { loadTagFilter, loadUsers } from "./users.js";
 import { loadTagsPage } from "./tags-page.js";
 import { loadBroadcastTags } from "./broadcast.js";
 import { loadScenario } from "./scenario.js";
+import { loadGraph } from "./graph.js";
 import { requireLogin, currentRole } from "./auth.js";
 
 const tabButtons = document.querySelectorAll(".tab-btn");
@@ -11,6 +12,7 @@ const tabs = {
   users: document.getElementById("tab-users"),
   tags: document.getElementById("tab-tags"),
   broadcast: document.getElementById("tab-broadcast"),
+  graph: document.getElementById("tab-graph"),
   scenario: document.getElementById("tab-scenario"),
 };
 
@@ -28,6 +30,7 @@ function activateTab(name) {
   if (name === "users") loadTagFilter().then(loadUsers);
   if (name === "tags") loadTagsPage();
   if (name === "broadcast") loadBroadcastTags();
+  if (name === "graph") loadGraph();
   if (name === "scenario") loadScenario();
 }
 
