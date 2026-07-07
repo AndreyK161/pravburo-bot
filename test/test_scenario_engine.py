@@ -152,6 +152,17 @@ async def test_condition_block_not_subscribed_goes_to_no_branch(bot, scenario):
     assert bot.send_message.call_args[0][1] == "Подпишитесь"
 
 
+async def test_condition_block_treats_never_joined_as_not_subscribed(bot, scenario):
+    # Если юзер никогда не состоял в канале (а не просто вышел), Telegram
+    # кидает ошибку вместо статуса "left" — это тоже должно значить "не подписан".
+    bot.get_chat_member.side_effect = TelegramBadRequest(method=AsyncMock(), message="member not found")
+
+    await render_block(bot, chat_id=1, user_id=42, block_id="gate")
+
+    bot.send_message.assert_awaited_once()
+    assert bot.send_message.call_args[0][1] == "Подпишитесь"
+
+
 async def test_input_block_records_awaiting_state_and_does_not_advance(bot, scenario):
     await render_block(bot, chat_id=1, user_id=42, block_id="ask_name")
 

@@ -42,7 +42,12 @@ def build_keyboard(buttons: list[dict]) -> InlineKeyboardMarkup | None:
 
 
 async def is_subscribed(bot: Bot, channel: str, user_id: int) -> bool:
-    member = await bot.get_chat_member(chat_id=channel, user_id=user_id)
+    try:
+        member = await bot.get_chat_member(chat_id=channel, user_id=user_id)
+    except TelegramBadRequest:
+        # Telegram кидает ошибку вместо статуса "left", если юзер никогда не
+        # состоял в канале (а не просто вышел) — это тоже значит "не подписан".
+        return False
     return member.status not in ("left", "kicked")
 
 
