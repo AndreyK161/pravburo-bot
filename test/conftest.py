@@ -12,11 +12,15 @@ def reset_state():
     state.LAST_BOT_MESSAGE.clear()
     state.AWAITING_INPUT.clear()
     state.USER_DATA.clear()
+    state.SPAM_EVENT_TIMES.clear()
+    state.SPAM_MUTED_UNTIL.clear()
     yield
     state.USER_ACTIVITY.clear()
     state.LAST_BOT_MESSAGE.clear()
     state.AWAITING_INPUT.clear()
     state.USER_DATA.clear()
+    state.SPAM_EVENT_TIMES.clear()
+    state.SPAM_MUTED_UNTIL.clear()
 
 
 @pytest.fixture

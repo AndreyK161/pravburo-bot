@@ -14,6 +14,11 @@ AWAITING_INPUT: dict[int, dict] = {}
 # Собранные от пользователей ответы (имя, телефон и т.п.): user_id -> {"name": "..."}
 USER_DATA: dict[int, dict] = {}
 
+# Антиспам: времена (time.monotonic()) последних сообщений/нажатий кнопок на пользователя,
+# и до какого момента он "замьючен" за флуд — см. antispam.py.
+SPAM_EVENT_TIMES: dict[int, list[float]] = {}
+SPAM_MUTED_UNTIL: dict[int, float] = {}
+
 
 def touch(user_id: int) -> int:
     USER_ACTIVITY[user_id] = USER_ACTIVITY.get(user_id, 0) + 1

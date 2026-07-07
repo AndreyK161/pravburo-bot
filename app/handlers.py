@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
+from antispam import AntiSpamMiddleware
 from config import TAG_CONSULTATION_STARTED
 from database import save_user_field, set_tag_by_name_if_untagged, upsert_user
 from scenario_engine import SCENARIO, render_block
@@ -9,6 +10,12 @@ from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_DATA, touch
 from validators import VALIDATORS
 
 dp = Dispatcher()
+
+# Один экземпляр на оба типа событий, чтобы флуд сообщениями и флуд кнопками
+# учитывались в общий лимит одного пользователя.
+_antispam = AntiSpamMiddleware()
+dp.message.middleware(_antispam)
+dp.callback_query.middleware(_antispam)
 
 
 # Command handler

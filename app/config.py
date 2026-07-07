@@ -34,3 +34,10 @@ CONSULTATION_START_BLOCK = "consultation"
 CONSULTATION_DONE_BLOCK = "consultation_contact"
 TAG_CONSULTATION_STARTED = "Консультация: нет"
 TAG_CONSULTATION_DONE = "Консультация: да"
+
+# Антиспам: если юзер шлёт больше ANTISPAM_MAX_EVENTS сообщений/нажатий кнопок
+# за ANTISPAM_WINDOW_SECONDS — считаем его спамером и молчим ANTISPAM_MUTE_SECONDS
+# (ничего не обрабатываем и не отвечаем, кроме одного предупреждения при входе в мут).
+ANTISPAM_WINDOW_SECONDS = 10
+ANTISPAM_MAX_EVENTS = 8
+ANTISPAM_MUTE_SECONDS = 60
