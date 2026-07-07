@@ -120,7 +120,11 @@
       <span id="usersRangeLabel"></span>
       <div class="flex items-center gap-2">
         <button id="prevPageBtn" class="border rounded-md px-3 py-1 disabled:opacity-40">Назад</button>
-        <span id="pageLabel"></span>
+        <span class="flex items-center gap-1">
+          Страница
+          <input id="pageInput" type="number" min="1" class="border rounded-md px-1.5 py-1 w-14 text-center">
+          из <span id="pageTotalLabel"></span>
+        </span>
         <button id="nextPageBtn" class="border rounded-md px-3 py-1 disabled:opacity-40">Вперёд</button>
       </div>
     </div>

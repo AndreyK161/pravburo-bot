@@ -4,6 +4,7 @@ import { showToast } from "./toast.js";
 
 const PAGE_SIZE = 20;
 let currentPage = 1;
+let totalPagesCache = 1;
 let allTags = [];
 
 export async function loadTagFilter() {
@@ -97,7 +98,10 @@ export async function loadUsers() {
   document.getElementById("usersRangeLabel").textContent = `Показано ${from}–${to} из ${total}`;
 
   const totalPages = Math.max(Math.ceil(total / page_size), 1);
-  document.getElementById("pageLabel").textContent = `Страница ${page} из ${totalPages}`;
+  totalPagesCache = totalPages;
+  document.getElementById("pageInput").value = page;
+  document.getElementById("pageInput").max = totalPages;
+  document.getElementById("pageTotalLabel").textContent = totalPages;
   document.getElementById("prevPageBtn").disabled = page <= 1;
   document.getElementById("nextPageBtn").disabled = page >= totalPages;
 }
@@ -131,5 +135,18 @@ document.getElementById("prevPageBtn").addEventListener("click", () => {
 document.getElementById("nextPageBtn").addEventListener("click", () => {
   currentPage += 1;
   loadUsers();
+});
+
+const pageInput = document.getElementById("pageInput");
+pageInput.addEventListener("change", () => {
+  const value = Math.min(Math.max(Number(pageInput.value) || 1, 1), totalPagesCache);
+  pageInput.value = value;
+  if (value !== currentPage) {
+    currentPage = value;
+    loadUsers();
+  }
+});
+pageInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") pageInput.blur();
 });
 
