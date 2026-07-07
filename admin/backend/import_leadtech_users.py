@@ -27,6 +27,17 @@ def variable_value(record: dict, name: str) -> str | None:
     return None
 
 
+def normalize_property(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    text = raw.strip().lower()
+    if text.startswith("да"):
+        return "yes"
+    if text.startswith("нет"):
+        return "no"
+    return None  # свободный текст вида "Автокредит есть..." — не разобрать однозначно
+
+
 def to_row(record: dict) -> tuple | None:
     telegram_id = record.get("telegram_id")
     if not telegram_id:
@@ -37,6 +48,10 @@ def to_row(record: dict) -> tuple | None:
     region = variable_value(record, "живет в") or variable_value(record, "Прописка")
     name = (record.get("name") or "").strip() or None
     created_at = datetime.fromisoformat(record["created_at"]) if record.get("created_at") else None
+    has_property = normalize_property(variable_value(record, "Имущество"))
+    # unsubscribed_at — отписка/блокировка старого бота на ЛидТехе. Не то же самое,
+    # что блокировка именно нашего бота, но это единственный сигнал, что есть в экспорте.
+    is_blocked = bool(record.get("unsubscribed_at"))
 
     return (
         user_id,
@@ -47,6 +62,8 @@ def to_row(record: dict) -> tuple | None:
         region,
         SOURCE_LABEL,
         created_at,
+        is_blocked,
+        has_property,
     )
 
 
@@ -73,8 +90,9 @@ async def main() -> None:
         for row in rows.values():
             result = await conn.execute(
                 """
-                INSERT INTO users (user_id, chat_id, username, name, phone, region, source, created_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, now()))
+                INSERT INTO users
+                    (user_id, chat_id, username, name, phone, region, source, created_at, is_blocked, has_property)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8, now()), $9, $10)
                 ON CONFLICT (user_id) DO NOTHING
                 """,
                 *row,

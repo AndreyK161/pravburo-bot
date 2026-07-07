@@ -57,7 +57,7 @@ async def list_users(
 
     list_query = f"""
         SELECT u.user_id, u.username, u.name, u.phone, u.region, u.source, u.current_stage,
-               u.created_at, u.updated_at, u.tag_id, t.name AS tag_name
+               u.has_property, u.is_blocked, u.created_at, u.updated_at, u.tag_id, t.name AS tag_name
         FROM users u
         LEFT JOIN tags t ON t.id = u.tag_id
         {where_clause}

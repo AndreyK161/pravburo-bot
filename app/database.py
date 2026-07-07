@@ -31,6 +31,13 @@ async def save_user_field(user_id: int, field: str, value: str) -> None:
         await conn.execute(f"UPDATE users SET {field} = $1, updated_at = now() WHERE user_id = $2", value, user_id)
 
 
+async def set_blocked(user_id: int, blocked: bool) -> None:
+    async with DB_POOL.acquire() as conn:
+        await conn.execute(
+            "UPDATE users SET is_blocked = $1, updated_at = now() WHERE user_id = $2", blocked, user_id
+        )
+
+
 async def update_current_stage(user_id: int, block_id: str) -> None:
     async with DB_POOL.acquire() as conn:
         await conn.execute(

@@ -40,6 +40,20 @@ async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
     await callback.answer()
 
 
+# Callback handler для кнопок, которые кроме перехода ещё и запоминают выбор
+# юзера (field:<имя_поля>=<значение>:<next_block_id>) — например "Да/Нет"
+# на вопрос про залоговое имущество.
+@dp.callback_query(F.data.startswith("field:"))
+async def scenario_field_button_handler(callback: CallbackQuery, bot: Bot) -> None:
+    touch(callback.from_user.id)
+    AWAITING_INPUT.pop(callback.from_user.id, None)
+    payload, next_block_id = callback.data.removeprefix("field:").split(":", 1)
+    field, value = payload.split("=", 1)
+    await save_user_field(callback.from_user.id, field, value)
+    await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
+    await callback.answer()
+
+
 # Защита от произвольного текста: если юзер написал что-то своё вместо
 # нажатия кнопки, просто направляем его обратно в главное меню.
 # Исключение — если бот ждёт от него конкретный ввод (блок "input").

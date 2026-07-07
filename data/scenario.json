@@ -237,11 +237,15 @@
       "buttons": [
         {
           "text": "Да",
-          "next": "consultation_offer_phone"
+          "next": "consultation_offer_phone",
+          "set_field": "has_property",
+          "set_value": "yes"
         },
         {
           "text": "Нет",
-          "next": "consultation_offer_phone"
+          "next": "consultation_offer_phone",
+          "set_field": "has_property",
+          "set_value": "no"
         }
       ],
       "name": "Долг от 300 тыс — есть ли залоговое имущество"

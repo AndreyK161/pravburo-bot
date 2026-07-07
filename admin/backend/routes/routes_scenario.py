@@ -11,6 +11,7 @@ from config import (
     VALIDATOR_NAMES,
     BLOCK_TYPES,
     BLOCK_REQUIRED_FIELDS,
+    BUTTON_SET_FIELDS,
 )
 
 router = APIRouter(prefix="/api/scenario", tags=["scenario"])
@@ -84,6 +85,11 @@ def _validate_scenario(scenario: dict) -> None:
                 raise HTTPException(
                     status_code=422,
                     detail=f"Блок '{block_id}': кнопка ссылается на несуществующий блок '{button['next']}'",
+                )
+            if button.get("set_field") and button["set_field"] not in BUTTON_SET_FIELDS:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Блок '{block_id}': недопустимое значение set_field '{button['set_field']}'",
                 )
 
 

@@ -28,6 +28,9 @@ FILES_DIR = DATA_DIR / "files"
 # бота — это те же самые белые списки, продублированные тут для валидации сценария.
 SAVE_AS_FIELDS = ["name", "phone", "region"]
 VALIDATOR_NAMES = ["phone"]
+# set_field у кнопок (см. app/config.py USER_FIELD_COLUMNS) — отдельно от SAVE_AS_FIELDS,
+# так как это не поле input-блока, а значение, которое запоминает нажатие кнопки.
+BUTTON_SET_FIELDS = ["has_property"]
 
 BLOCK_TYPES = ["message", "document", "input", "condition", "delay"]
 BLOCK_REQUIRED_FIELDS = {

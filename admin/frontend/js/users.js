@@ -20,6 +20,12 @@ export async function loadTagFilter() {
   document.getElementById("tagFilter").innerHTML = filterOptions;
 }
 
+function yesNoHtml(value) {
+  if (value === true || value === "yes") return '<span class="text-green-700">Да</span>';
+  if (value === false || value === "no") return '<span class="text-gray-400">Нет</span>';
+  return '<span class="text-gray-300">—</span>';
+}
+
 function tagSelectHtml(userTagId) {
   const options = ['<option value="">—</option>']
     .concat(
@@ -66,6 +72,8 @@ export async function loadUsers() {
         <td class="py-2 px-3" data-label="Регион">${escapeHtml(u.region ?? "")}</td>
         <td class="py-2 px-3" data-label="Source">${escapeHtml(u.source ?? "")}</td>
         <td class="py-2 px-3 max-w-[160px] truncate" data-label="Этап" title="${escapeHtml(u.current_stage ?? "")}">${escapeHtml(u.current_stage ?? "")}</td>
+        <td class="py-2 px-3" data-label="Имущество">${yesNoHtml(u.has_property)}</td>
+        <td class="py-2 px-3" data-label="Заблокирован">${yesNoHtml(u.is_blocked)}</td>
         <td class="py-2 px-3" data-label="Тег">${tagSelectHtml(u.tag_id)}</td>
         <td class="py-2 px-3" data-label="Создан">${new Date(u.created_at).toLocaleString("ru-RU")}</td>
       </tr>`

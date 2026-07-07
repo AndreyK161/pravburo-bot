@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from config import (
@@ -17,7 +17,7 @@ from config import (
     TAG_CONSULTATION_DONE,
     TAG_CONSULTATION_STARTED,
 )
-from database import set_tag_by_name, update_current_stage
+from database import set_blocked, set_tag_by_name, update_current_stage
 from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_ACTIVITY
 
 with open(SCENARIO_PATH, "r", encoding="utf-8") as f:
@@ -27,8 +27,16 @@ with open(SCENARIO_PATH, "r", encoding="utf-8") as f:
 def build_keyboard(buttons: list[dict]) -> InlineKeyboardMarkup | None:
     if not buttons:
         return None
+
+    def callback_data(btn: dict) -> str:
+        # Кнопка может не просто вести в следующий блок, но и запомнить выбор
+        # юзера (set_field/set_value) — например "Да/Нет" на вопрос про имущество.
+        if "set_field" in btn:
+            return f"field:{btn['set_field']}={btn['set_value']}:{btn['next']}"
+        return f"block:{btn['next']}"
+
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=btn["text"], callback_data=f"block:{btn['next']}")]
+        [InlineKeyboardButton(text=btn["text"], callback_data=callback_data(btn))]
         for btn in buttons
     ])
 
@@ -72,6 +80,16 @@ async def show_text(
 
 
 async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, replace: bool = True) -> None:
+    # Оборачиваем весь показ блока (включая рекурсивные вызовы условия/паузы/
+    # auto_next) — если юзер заблокировал бота, любая отправка упадёт с этой
+    # ошибкой, и мы просто помечаем его в базе, ничего не роняя дальше.
+    try:
+        await _render_block(bot, chat_id, user_id, block_id, replace)
+    except TelegramForbiddenError:
+        await set_blocked(user_id, True)
+
+
+async def _render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, replace: bool) -> None:
     block = SCENARIO["blocks"][block_id]
 
     if block["type"] == "condition":
@@ -92,6 +110,7 @@ async def render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, repl
         return
 
     await update_current_stage(user_id, block_id)
+    await set_blocked(user_id, False)  # раз дошли досюда — значит, реально отправляем, бот не заблокирован
     if block_id == CONSULTATION_START_BLOCK:
         await set_tag_by_name(user_id, TAG_CONSULTATION_STARTED)
     elif block_id == CONSULTATION_DONE_BLOCK:
