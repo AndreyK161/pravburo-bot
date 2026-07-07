@@ -3,7 +3,7 @@ import { loadTagFilter, loadUsers } from "./users.js";
 import { loadTagsPage } from "./tags-page.js";
 import { loadBroadcastTags } from "./broadcast.js";
 import { loadScenario } from "./scenario.js";
-import { loadGraph } from "./graph.js";
+import { loadGraph, setGraphTabVisible } from "./graph/index.js";
 import { requireLogin, currentRole } from "./auth.js";
 
 const tabButtons = document.querySelectorAll(".tab-btn");
@@ -32,6 +32,7 @@ function activateTab(name) {
   if (name === "broadcast") loadBroadcastTags();
   if (name === "graph") loadGraph();
   if (name === "scenario") loadScenario();
+  setGraphTabVisible(name === "graph");
 }
 
 const mobileMenu = document.getElementById("mobileMenu");
