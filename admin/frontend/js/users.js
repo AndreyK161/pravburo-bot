@@ -58,15 +58,15 @@ export async function loadUsers() {
     .map(
       (u) => `
       <tr class="border-b last:border-0" data-user-id="${u.user_id}">
-        <td class="py-2 px-3">${u.user_id}</td>
-        <td class="py-2 px-3">${escapeHtml(u.username ?? "")}</td>
-        <td class="py-2 px-3">${escapeHtml(u.name ?? "")}</td>
-        <td class="py-2 px-3">${escapeHtml(u.phone ?? "")}</td>
-        <td class="py-2 px-3">${escapeHtml(u.region ?? "")}</td>
-        <td class="py-2 px-3">${escapeHtml(u.source ?? "")}</td>
-        <td class="py-2 px-3 max-w-[160px] truncate" title="${escapeHtml(u.current_stage ?? "")}">${escapeHtml(u.current_stage ?? "")}</td>
-        <td class="py-2 px-3">${tagSelectHtml(u.tag_id)}</td>
-        <td class="py-2 px-3">${new Date(u.created_at).toLocaleString("ru-RU")}</td>
+        <td class="py-2 px-3" data-label="ID">${u.user_id}</td>
+        <td class="py-2 px-3" data-label="Username">${escapeHtml(u.username ?? "")}</td>
+        <td class="py-2 px-3" data-label="Имя">${escapeHtml(u.name ?? "")}</td>
+        <td class="py-2 px-3" data-label="Телефон">${escapeHtml(u.phone ?? "")}</td>
+        <td class="py-2 px-3" data-label="Регион">${escapeHtml(u.region ?? "")}</td>
+        <td class="py-2 px-3" data-label="Source">${escapeHtml(u.source ?? "")}</td>
+        <td class="py-2 px-3 max-w-[160px] truncate" data-label="Этап" title="${escapeHtml(u.current_stage ?? "")}">${escapeHtml(u.current_stage ?? "")}</td>
+        <td class="py-2 px-3" data-label="Тег">${tagSelectHtml(u.tag_id)}</td>
+        <td class="py-2 px-3" data-label="Создан">${new Date(u.created_at).toLocaleString("ru-RU")}</td>
       </tr>`
     )
     .join("");

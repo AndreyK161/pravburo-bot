@@ -31,12 +31,41 @@ function activateTab(name) {
   if (name === "scenario") loadScenario();
 }
 
-tabButtons.forEach((btn) => btn.addEventListener("click", () => activateTab(btn.dataset.tab)));
+const mobileMenu = document.getElementById("mobileMenu");
+const mobileMenuBtn = document.getElementById("mobileMenuBtn");
+const mobileMenuIconOpen = document.getElementById("mobileMenuIconOpen");
+const mobileMenuIconClose = document.getElementById("mobileMenuIconClose");
+
+function closeMobileMenu() {
+  mobileMenu.classList.add("hidden");
+  mobileMenuIconOpen.classList.remove("hidden");
+  mobileMenuIconClose.classList.add("hidden");
+  mobileMenuBtn.setAttribute("aria-expanded", "false");
+}
+
+mobileMenuBtn.addEventListener("click", () => {
+  const isOpen = !mobileMenu.classList.contains("hidden");
+  if (isOpen) {
+    closeMobileMenu();
+  } else {
+    mobileMenu.classList.remove("hidden");
+    mobileMenuIconOpen.classList.add("hidden");
+    mobileMenuIconClose.classList.remove("hidden");
+    mobileMenuBtn.setAttribute("aria-expanded", "true");
+  }
+});
+
+tabButtons.forEach((btn) =>
+  btn.addEventListener("click", () => {
+    activateTab(btn.dataset.tab);
+    closeMobileMenu();
+  })
+);
 
 requireLogin().then((ok) => {
   if (!ok) return;
   if (currentRole !== "admin") {
-    document.querySelector('[data-tab="scenario"]').classList.add("hidden");
+    document.querySelectorAll('[data-tab="scenario"]').forEach((el) => el.classList.add("hidden"));
   }
   activateTab("stats");
 });

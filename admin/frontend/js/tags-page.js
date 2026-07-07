@@ -22,11 +22,11 @@ export async function loadTagsPage() {
     .map(
       (t) => `
       <tr class="border-b last:border-0" data-tag-id="${t.id}">
-        <td class="py-2 px-3">
-          <input type="text" value="${escapeHtml(t.name)}" maxlength="32" class="tag-rename-input border rounded-md px-2 py-1 text-sm w-56">
+        <td class="py-2 px-3" data-label="Название">
+          <input type="text" value="${escapeHtml(t.name)}" maxlength="32" class="tag-rename-input border rounded-md px-2 py-1 text-sm w-36 sm:w-56">
         </td>
-        <td class="py-2 px-3">${new Date(t.created_at).toLocaleString("ru-RU")}</td>
-        <td class="py-2 px-3 whitespace-nowrap">
+        <td class="py-2 px-3" data-label="Создан">${new Date(t.created_at).toLocaleString("ru-RU")}</td>
+        <td class="py-2 px-3 whitespace-nowrap" data-label="">
           <button class="tag-save-btn text-sm text-blue-600 hover:underline mr-3">Сохранить</button>
           <button class="tag-delete-btn text-sm text-red-600 hover:underline">Удалить</button>
         </td>

@@ -6,25 +6,46 @@
 <title>Админка Правбюро</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100 text-gray-900 min-h-screen">
 
 <header class="bg-white border-b">
   <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
     <h1 class="text-lg font-semibold">Админка Правбюро</h1>
-    <nav class="flex items-center gap-2">
-      <button data-tab="stats" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Статистика</button>
-      <button data-tab="users" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Пользователи</button>
-      <button data-tab="tags" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Теги</button>
-      <button data-tab="broadcast" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Рассылки</button>
-      <button data-tab="scenario" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Сценарий</button>
-      <span id="currentUsername" class="text-sm text-gray-400 ml-3"></span>
-      <button id="logoutBtn" class="text-sm text-red-600 px-2">Выйти</button>
-    </nav>
+    <div class="flex items-center gap-3">
+      <span id="currentUsername" class="text-sm text-gray-400"></span>
+      <nav class="hidden sm:flex items-center gap-2">
+        <button data-tab="stats" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Статистика</button>
+        <button data-tab="users" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Пользователи</button>
+        <button data-tab="tags" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Теги</button>
+        <button data-tab="broadcast" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Рассылки</button>
+        <button data-tab="scenario" class="tab-btn px-3 py-1.5 rounded-md text-sm font-medium">Сценарий</button>
+        <button id="logoutBtn" class="logout-btn text-sm text-red-600 px-2">Выйти</button>
+      </nav>
+      <button id="mobileMenuBtn" class="sm:hidden p-1.5 -mr-1.5 text-gray-700" aria-label="Меню" aria-expanded="false">
+        <svg id="mobileMenuIconOpen" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <svg id="mobileMenuIconClose" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
   </div>
+  <nav id="mobileMenu" class="hidden sm:hidden border-t">
+    <div class="px-4 py-2 flex flex-col">
+      <button data-tab="stats" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Статистика</button>
+      <button data-tab="users" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Пользователи</button>
+      <button data-tab="tags" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Теги</button>
+      <button data-tab="broadcast" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Рассылки</button>
+      <button data-tab="scenario" class="tab-btn px-3 py-2.5 rounded-md text-sm font-medium text-left">Сценарий</button>
+      <button id="mobileLogoutBtn" class="logout-btn text-sm text-red-600 px-3 py-2.5 text-left border-t mt-1 pt-3">Выйти</button>
+    </div>
+  </nav>
 </header>
 
-<main class="max-w-6xl mx-auto px-4 py-6">
+<main class="max-w-6xl mx-auto px-3 sm:px-4 py-6">
 
   <section id="tab-stats" class="space-y-6">
     <div class="bg-white rounded-lg shadow-sm border p-4">
@@ -56,7 +77,7 @@
   <section id="tab-users" class="hidden space-y-4">
     <div class="bg-white rounded-lg shadow-sm border p-4 flex flex-wrap items-center gap-3">
       <label class="text-sm text-gray-600">Фильтр:</label>
-      <select id="userSearchField" class="border rounded-md px-2 py-1 text-sm">
+      <select id="userSearchField" class="border rounded-md px-2 py-1 text-sm w-full sm:w-auto">
         <option value="name">Имя</option>
         <option value="username">Username</option>
         <option value="phone">Телефон</option>
@@ -64,17 +85,17 @@
         <option value="source">Source</option>
         <option value="user_id">ID</option>
       </select>
-      <input id="userSearch" type="text" placeholder="Значение..." class="border rounded-md px-2 py-1 text-sm w-56">
+      <input id="userSearch" type="text" placeholder="Значение..." class="border rounded-md px-2 py-1 text-sm w-full sm:w-56">
 
       <label class="text-sm text-gray-600">Тег:</label>
-      <select id="tagFilter" class="border rounded-md px-2 py-1 text-sm">
+      <select id="tagFilter" class="border rounded-md px-2 py-1 text-sm w-full sm:w-auto">
         <option value="">Все</option>
       </select>
 
     </div>
 
-    <div class="bg-white rounded-lg shadow-sm border overflow-x-auto">
-      <table class="w-full text-sm whitespace-nowrap">
+    <div class="responsive-table-wrap bg-white rounded-lg shadow-sm border overflow-x-auto">
+      <table class="responsive-table w-full text-sm sm:whitespace-nowrap">
         <thead>
           <tr class="text-left text-gray-500 border-b">
             <th class="py-2 px-3">ID</th>
@@ -108,8 +129,8 @@
       <button id="createTagBtn" class="bg-gray-900 text-white text-sm px-3 py-1.5 rounded-md">Создать</button>
     </div>
 
-    <div class="bg-white rounded-lg shadow-sm border overflow-x-auto">
-      <table class="w-full text-sm">
+    <div class="responsive-table-wrap bg-white rounded-lg shadow-sm border overflow-x-auto">
+      <table class="responsive-table w-full text-sm">
         <thead>
           <tr class="text-left text-gray-500 border-b">
             <th class="py-2 px-3">Название</th>
@@ -144,8 +165,8 @@
   </section>
 
   <section id="tab-scenario" class="hidden">
-    <div class="grid grid-cols-3 gap-4 items-start">
-      <div class="bg-white rounded-lg shadow-sm border p-4 col-span-1">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+      <div class="bg-white rounded-lg shadow-sm border p-4 md:col-span-1">
         <div class="flex items-center justify-between mb-3">
           <h2 class="font-semibold">Блоки сценария</h2>
           <button id="newBlockBtn" class="text-sm bg-gray-900 text-white px-2 py-1 rounded-md">+ Новый</button>
@@ -154,7 +175,7 @@
         <div id="blockList" class="space-y-1 max-h-[70vh] overflow-y-auto text-sm"></div>
       </div>
 
-      <div class="bg-white rounded-lg shadow-sm border p-4 col-span-2">
+      <div class="bg-white rounded-lg shadow-sm border p-4 md:col-span-2">
         <div id="blockEditorEmpty" class="text-sm text-gray-500">Выберите блок слева или создайте новый.</div>
         <form id="blockEditorForm" class="hidden space-y-3">
           <div>

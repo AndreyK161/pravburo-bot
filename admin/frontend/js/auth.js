@@ -23,7 +23,9 @@ export async function requireLogin() {
   }
 }
 
-document.getElementById("logoutBtn").addEventListener("click", async () => {
-  await fetch("/api/auth/logout", { method: "POST" });
-  window.location.href = "/login";
+document.querySelectorAll(".logout-btn").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+  });
 });
