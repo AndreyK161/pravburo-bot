@@ -325,7 +325,7 @@
         "Spisok_kreditorov.pdf",
         "Forma_zaavlenia.pdf"
       ],
-      "auto_next": "recommendation",
+      "auto_next": "delay_twenty_minutes",
       "name": "МФЦ — необходимые документы"
     },
     "stub_order": {
