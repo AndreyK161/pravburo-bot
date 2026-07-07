@@ -47,16 +47,13 @@ export async function loadGraph() {
     physics: {
       solver: "barnesHut",
       barnesHut: {
-        gravitationalConstant: -4000,
+        gravitationalConstant: -2200,
         centralGravity: 0.15,
         springLength: 220,
         springConstant: 0.02,
         damping: 0.7,
-        avoidOverlap: 1,
+        avoidOverlap: 0.7,
       },
-      // Физика включена постоянно (как в Obsidian): без движения она сама
-      // "засыпает" (minVelocity) и не жрёт CPU, но при перетаскивании соседи
-      // мягко, пружинисто реагируют.
       minVelocity: 0.75,
       adaptiveTimestep: true,
       stabilization: savedPositions ? false : { iterations: 250 },
@@ -71,13 +68,6 @@ export async function loadGraph() {
   graphTabVisible = true;
   idleJiggle = setupIdleJiggle(network);
 
-  // Раскладка сохраняется на сервере один раз — при первом построении графа
-  // с нуля. Дальнейшее перетаскивание узлов — локальное, никуда не пишется
-  // (не гоняем сервер зря и не расшатываем общую для всех раскладку).
-  //
-  // После отпускания/доезда физика ещё немного сама доводит соседей до
-  // равновесия — возобновлять дыхание раньше нельзя, оба механизма толкали бы
-  // одни и те же узлы одновременно. Поэтому ждём небольшую паузу.
   let interactionActive = false;
   let resumeTimer = null;
   const scheduleResume = () => {
