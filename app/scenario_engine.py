@@ -41,6 +41,19 @@ def build_keyboard(buttons: list[dict]) -> InlineKeyboardMarkup | None:
     ])
 
 
+async def gate_next_block(bot: Bot, user_id: int, next_block_id: str) -> str:
+    # Проверка подписки на канал сидит в самом первом блоке сценария (обычно
+    # "condition"). Если юзер успел отписаться, любой клик по кнопке — хоть
+    # новой, хоть старой из истории чата — должен возвращать его на эту
+    # проверку заново, а не пускать дальше по next_block_id как ни в чём не бывало.
+    start_block = SCENARIO["blocks"][SCENARIO["start"]]
+    if start_block["type"] != "condition":
+        return next_block_id
+    if await is_subscribed(bot, start_block["channel"], user_id):
+        return next_block_id
+    return SCENARIO["start"]
+
+
 async def is_subscribed(bot: Bot, channel: str, user_id: int) -> bool:
     try:
         member = await bot.get_chat_member(chat_id=channel, user_id=user_id)

@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from antispam import AntiSpamMiddleware
 from config import TAG_CONSULTATION_STARTED
 from database import save_user_field, set_tag_by_name_if_untagged, upsert_user
-from scenario_engine import SCENARIO, render_block
+from scenario_engine import SCENARIO, gate_next_block, render_block
 from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_DATA, touch
 from validators import VALIDATORS
 
@@ -48,6 +48,7 @@ async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
     touch(callback.from_user.id)
     AWAITING_INPUT.pop(callback.from_user.id, None)
     next_block_id = callback.data.removeprefix("block:")
+    next_block_id = await gate_next_block(bot, callback.from_user.id, next_block_id)
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
     await safe_answer(callback)
 
@@ -62,6 +63,7 @@ async def scenario_field_button_handler(callback: CallbackQuery, bot: Bot) -> No
     payload, next_block_id = callback.data.removeprefix("field:").split(":", 1)
     field, value = payload.split("=", 1)
     await save_user_field(callback.from_user.id, field, value)
+    next_block_id = await gate_next_block(bot, callback.from_user.id, next_block_id)
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
     await safe_answer(callback)
 
@@ -90,7 +92,8 @@ async def fallback_text_handler(message: Message, bot: Bot) -> None:
         AWAITING_INPUT.pop(user_id, None)
         USER_DATA.setdefault(user_id, {})[pending["save_as"]] = value
         await save_user_field(user_id, pending["save_as"], value)
-        await render_block(bot, message.chat.id, user_id, pending["next"], replace=False)
+        next_block_id = await gate_next_block(bot, user_id, pending["next"])
+        await render_block(bot, message.chat.id, user_id, next_block_id, replace=False)
         return
 
     # Ведём на SCENARIO["start"] (проверку подписки), а не сразу на general_menu —
