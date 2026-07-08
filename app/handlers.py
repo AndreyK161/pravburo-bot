@@ -1,4 +1,5 @@
 from aiogram import Bot, Dispatcher, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
@@ -10,6 +11,17 @@ from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_DATA, touch
 from validators import VALIDATORS
 
 dp = Dispatcher()
+
+
+async def safe_answer(callback: CallbackQuery) -> None:
+    # Если юзер жал кнопку на медленной сети, Telegram может успеть посчитать
+    # запрос просроченным ("query is too old") — это не наша ошибка и не повод
+    # ронять обработку апдейта, просто нечего ансвертить.
+    try:
+        await callback.answer()
+    except TelegramBadRequest:
+        pass
+
 
 # Один экземпляр на оба типа событий, чтобы флуд сообщениями и флуд кнопками
 # учитывались в общий лимит одного пользователя.
@@ -37,7 +49,7 @@ async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
     AWAITING_INPUT.pop(callback.from_user.id, None)
     next_block_id = callback.data.removeprefix("block:")
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
-    await callback.answer()
+    await safe_answer(callback)
 
 
 # Callback handler для кнопок, которые кроме перехода ещё и запоминают выбор
@@ -51,7 +63,7 @@ async def scenario_field_button_handler(callback: CallbackQuery, bot: Bot) -> No
     field, value = payload.split("=", 1)
     await save_user_field(callback.from_user.id, field, value)
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
-    await callback.answer()
+    await safe_answer(callback)
 
 
 # Защита от произвольного текста: если юзер написал что-то своё вместо
@@ -81,8 +93,11 @@ async def fallback_text_handler(message: Message, bot: Bot) -> None:
         await render_block(bot, message.chat.id, user_id, pending["next"], replace=False)
         return
 
+    # Ведём на SCENARIO["start"] (проверку подписки), а не сразу на general_menu —
+    # иначе неподписанный юзер мог зайти в меню в обход проверки, просто написав
+    # что угодно в чат вместо нажатия "Проверить подписку".
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="В меню", callback_data="block:general_menu")]
+        [InlineKeyboardButton(text="В меню", callback_data=f"block:{SCENARIO['start']}")]
     ])
     sent = await bot.send_message(message.chat.id, "Для возврата в главное меню нажмите ⬇️", reply_markup=keyboard)
     LAST_BOT_MESSAGE[user_id] = sent
