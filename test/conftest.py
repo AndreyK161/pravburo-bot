@@ -2,7 +2,18 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+import database
 import state
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def _db_pool():
+    """Реальный пул к тестовой БД — часть тестов (handlers/scenario_engine)
+    пишет в users через настоящие DB-функции, без реального Postgres они падают
+    с AttributeError на DB_POOL. Требует запущенный Postgres (DATABASE_URL в .env)."""
+    await database.init_db_pool()
+    yield
+    await database.close_db_pool()
 
 
 @pytest.fixture(autouse=True)

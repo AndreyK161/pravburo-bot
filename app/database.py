@@ -13,6 +13,11 @@ async def init_db_pool() -> None:
     DB_POOL = await asyncpg.create_pool(DATABASE_URL)
 
 
+async def close_db_pool() -> None:
+    if DB_POOL is not None:
+        await DB_POOL.close()
+
+
 async def upsert_user(user_id: int, chat_id: int, username: str | None, source: str | None = None) -> None:
     # source не трогаем при повторных заходах — фиксируем метку только с первого /start.
     async with DB_POOL.acquire() as conn:

@@ -10,9 +10,10 @@ from scenario_engine import build_keyboard, render_block
 
 
 async def let_background_tasks_run() -> None:
-    """Несколько циклов событийного цикла — чтобы фоновая asyncio.create_task успела отработать."""
-    for _ in range(5):
-        await asyncio.sleep(0)
+    """Ждём, пока фоновая asyncio.create_task отработает — с реальной БД внутри
+    неё настоящий сетевой round-trip, поэтому нужен не просто холостой тик цикла
+    событий, а немного настоящего времени."""
+    await asyncio.sleep(0.2)
 
 
 def test_build_keyboard_empty():
