@@ -163,8 +163,25 @@
 
       <div>
         <label class="text-sm text-gray-600 block mb-1">Текст сообщения:</label>
-        <textarea id="broadcastText" rows="6" class="border rounded-md px-2 py-1.5 text-sm w-full"
-                  placeholder="Текст рассылки..."></textarea>
+        <div class="flex items-center gap-2 mb-1">
+          <button type="button" id="broadcastBoldBtn" class="border rounded-md px-2.5 py-1 text-sm font-bold" title="Жирный (Ctrl+B)">Ж</button>
+          <button type="button" id="broadcastItalicBtn" class="border rounded-md px-2.5 py-1 text-sm italic" title="Курсив (Ctrl+I)">К</button>
+          <button type="button" id="broadcastUnderlineBtn" class="border rounded-md px-2.5 py-1 text-sm underline" title="Подчёркнутый (Ctrl+U)">Ч</button>
+          <button type="button" id="broadcastStrikeBtn" class="border rounded-md px-2.5 py-1 text-sm line-through" title="Зачёркнутый">S</button>
+          <button type="button" id="broadcastLinkBtn" class="border rounded-md px-2.5 py-1 text-sm" title="Вставить ссылку">🔗</button>
+        </div>
+        <div id="broadcastText" contenteditable="true" data-placeholder="Текст рассылки..."
+             class="broadcast-editor border rounded-md px-2 py-1.5 text-sm w-full min-h-[120px] focus:outline-none focus:ring-1 focus:ring-gray-400"></div>
+        <p class="text-xs text-gray-400 mt-1">
+          Можно вставить текст — жирный и курсив сохранятся но может не работать с тг.
+          Для ссылок используйте кнопку 🔗 — вставка ссылок из Telegram ненадёжна.
+        </p>
+      </div>
+
+      <div>
+        <label class="text-sm text-gray-600 block mb-1">Изображение (необязательно):</label>
+        <input id="broadcastImage" type="file" accept="image/jpeg,image/png,image/webp" class="text-sm">
+        <img id="broadcastImagePreview" class="hidden mt-2 max-h-40 rounded-md border">
       </div>
 
       <button id="broadcastSendBtn" class="bg-gray-900 text-white text-sm px-4 py-2 rounded-md">Отправить рассылку</button>
@@ -232,6 +249,22 @@
       <button id="confirmModalConfirm" class="px-3 py-1.5 rounded-md text-sm bg-gray-900 text-white">Подтвердить</button>
     </div>
   </div>
+</div>
+
+<div id="linkModalOverlay" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-40 transition-opacity duration-200 opacity-0">
+  <form id="linkModalForm" class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 transition-all duration-200 opacity-0 scale-95">
+    <p class="text-sm font-medium text-gray-800 mb-3">Вставить ссылку</p>
+    <label class="block text-xs text-gray-500 mb-1">Ссылка (URL)</label>
+    <input id="linkModalUrl" type="text" required placeholder="example.com" class="w-full border rounded-md px-2.5 py-1.5 text-sm mb-3">
+    <div id="linkModalLabelWrap">
+      <label class="block text-xs text-gray-500 mb-1">Текст ссылки</label>
+      <input id="linkModalLabel" type="text" placeholder="Текст ссылки" class="w-full border rounded-md px-2.5 py-1.5 text-sm mb-3">
+    </div>
+    <div class="flex justify-end gap-2 mt-2">
+      <button type="button" id="linkModalCancel" class="px-3 py-1.5 rounded-md text-sm border">Отмена</button>
+      <button type="submit" id="linkModalConfirm" class="px-3 py-1.5 rounded-md text-sm bg-gray-900 text-white">Вставить</button>
+    </div>
+  </form>
 </div>
 
 <script type="module" src="js/main.js"></script>

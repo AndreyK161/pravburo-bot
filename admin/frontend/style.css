@@ -1,3 +1,19 @@
+.broadcast-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.broadcast-editor b,
+.broadcast-editor strong {
+  font-weight: 700;
+}
+
+.broadcast-editor i,
+.broadcast-editor em {
+  font-style: italic;
+}
+
 @media (max-width: 640px) {
   .responsive-table-wrap {
     background: transparent !important;
