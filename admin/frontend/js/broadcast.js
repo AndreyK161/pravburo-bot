@@ -187,17 +187,20 @@ document.getElementById("broadcastSendBtn").addEventListener("click", async () =
   try {
     const res = await fetch("/api/broadcast", { method: "POST", body: formData });
     const data = await res.json();
-    if (res.ok) {
-      resultEl.className = "text-sm text-gray-700";
-      resultEl.textContent = `Готово: доставлено ${data.sent} из ${data.total}, заблокировали бота ${data.blocked}, ошибок ${data.failed}.`;
-      editor.innerHTML = "";
-      broadcastImageInput.value = "";
-      broadcastImagePreview.classList.add("hidden");
-      broadcastImagePreview.src = "";
-    } else {
+    if (!res.ok) {
       resultEl.className = "text-sm text-red-600";
       resultEl.textContent = data.detail ?? "Не удалось отправить рассылку";
+      btn.disabled = false;
+      btn.textContent = "Отправить рассылку";
+      return;
     }
+
+    editor.innerHTML = "";
+    broadcastImageInput.value = "";
+    broadcastImagePreview.classList.add("hidden");
+    broadcastImagePreview.src = "";
+    resultEl.className = "text-sm text-gray-700";
+    await pollBroadcastStatus(data.broadcast_id, resultEl);
   } catch {
     showToast("Не удалось отправить рассылку: ошибка сети");
   } finally {
@@ -205,3 +208,23 @@ document.getElementById("broadcastSendBtn").addEventListener("click", async () =
     btn.textContent = "Отправить рассылку";
   }
 });
+
+async function pollBroadcastStatus(broadcastId, resultEl) {
+  while (true) {
+    let progress;
+    try {
+      const res = await fetch(`/api/broadcast/${broadcastId}`);
+      progress = await res.json();
+    } catch {
+      resultEl.textContent = "Рассылка запущена, но не удалось получить статус (ошибка сети).";
+      return;
+    }
+
+    resultEl.textContent = progress.done
+      ? `Готово: доставлено ${progress.sent} из ${progress.total}, заблокировали бота ${progress.blocked}, ошибок ${progress.failed}.`
+      : `Отправка... ${progress.sent + progress.blocked + progress.failed} из ${progress.total}`;
+
+    if (progress.done) return;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}

@@ -8,7 +8,12 @@ load_dotenv()
 DATABASE_URL = getenv("DATABASE_URL")
 BOT_TOKEN = getenv("BOT_TOKEN")
 
-BROADCAST_DELAY_SECONDS = 0.05
+# Telegram Bot API разрешает ~30 сообщений/сек суммарно разным чатам.
+# Держим темп запуска новых отправок чуть ниже лимита (с запасом на джиттер
+# сети), а конкурентность ограничиваем отдельно — чтобы не накопить лавину
+# одновременных запросов, если Telegram вдруг начал отвечать медленнее обычного.
+BROADCAST_RATE_PER_SECOND = 20
+BROADCAST_MAX_CONCURRENCY = 30
 
 SESSION_SECRET_KEY = getenv("SESSION_SECRET_KEY")
 SESSION_COOKIE_NAME = "admin_session"
