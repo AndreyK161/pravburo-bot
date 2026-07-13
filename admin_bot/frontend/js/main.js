@@ -1,7 +1,7 @@
 import { loadStats } from "./stats.js";
 import { loadTagFilter, loadUsers } from "./users.js";
 import { loadTagsPage } from "./tags-page.js";
-import { loadBroadcastTags } from "./broadcast.js";
+import { loadBroadcastTags, loadScheduledBroadcasts } from "./broadcast.js";
 import { loadScenario } from "./scenario.js";
 import { loadGraph, setGraphTabVisible } from "./graph/index.js";
 import { requireLogin, currentRole } from "./auth.js";
@@ -29,7 +29,10 @@ function activateTab(name) {
   if (name === "stats") loadStats();
   if (name === "users") loadTagFilter().then(loadUsers);
   if (name === "tags") loadTagsPage();
-  if (name === "broadcast") loadBroadcastTags();
+  if (name === "broadcast") {
+    loadBroadcastTags();
+    loadScheduledBroadcasts();
+  }
   if (name === "graph") loadGraph();
   if (name === "scenario") loadScenario();
   setGraphTabVisible(name === "graph");

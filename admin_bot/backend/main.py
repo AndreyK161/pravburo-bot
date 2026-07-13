@@ -1,3 +1,5 @@
+import asyncio
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -13,16 +15,31 @@ from routes.routes_tags import router as tags_router
 from routes.routes_users import router as users_router
 from routes.routes_scenario import router as scenario_router
 from routes.routes_scenario_graph import router as scenario_graph_router
-from routes.routes_broadcast import router as broadcast_router
+from routes.routes_broadcast import router as broadcast_router, check_due_broadcasts
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+
+# Отдельного воркера/Celery/Redis под отложенные рассылки нет — проверяем
+# наступившие рассылки прямо в процессе админки на этом же event loop.
+SCHEDULER_INTERVAL_SECONDS = 20
+
+
+async def _scheduler_loop() -> None:
+    while True:
+        try:
+            await check_due_broadcasts()
+        except Exception:
+            traceback.print_exc()
+        await asyncio.sleep(SCHEDULER_INTERVAL_SECONDS)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await database.init_db_pool()
     await bot_client.init_bot()
+    scheduler_task = asyncio.create_task(_scheduler_loop())
     yield
+    scheduler_task.cancel()
     await bot_client.close_bot()
     await database.close_db_pool()
 

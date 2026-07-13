@@ -153,10 +153,33 @@ broadcastImageInput.addEventListener("change", () => {
   broadcastImagePreview.classList.remove("hidden");
 });
 
-document.getElementById("broadcastSendBtn").addEventListener("click", async () => {
+function buildBroadcastFormData() {
   const text = editorToTelegramHtml();
   const tagId = document.getElementById("broadcastTag").value;
   const imageFile = broadcastImageInput.files[0] ?? null;
+
+  const formData = new FormData();
+  formData.append("text", text);
+  if (tagId) formData.append("tag_id", tagId);
+  if (imageFile) formData.append("image", imageFile);
+  return { text, tagId, formData };
+}
+
+function targetLabelFor(tagId) {
+  return tagId
+    ? document.getElementById("broadcastTag").selectedOptions[0].textContent
+    : "всем пользователям";
+}
+
+function clearBroadcastForm() {
+  editor.innerHTML = "";
+  broadcastImageInput.value = "";
+  broadcastImagePreview.classList.add("hidden");
+  broadcastImagePreview.src = "";
+}
+
+document.getElementById("broadcastSendBtn").addEventListener("click", async () => {
+  const { text, tagId, formData } = buildBroadcastFormData();
   const resultEl = document.getElementById("broadcastResult");
 
   if (!text) {
@@ -165,11 +188,8 @@ document.getElementById("broadcastSendBtn").addEventListener("click", async () =
     return;
   }
 
-  const targetLabel = tagId
-    ? document.getElementById("broadcastTag").selectedOptions[0].textContent
-    : "всем пользователям";
   const confirmed = await confirmModal(
-    `Отправить рассылку ${targetLabel}?\n\nЭто действие необратимо.`,
+    `Отправить рассылку ${targetLabelFor(tagId)}?\n\nЭто действие необратимо.`,
     "Отправить"
   );
   if (!confirmed) return;
@@ -178,11 +198,6 @@ document.getElementById("broadcastSendBtn").addEventListener("click", async () =
   btn.disabled = true;
   btn.textContent = "Отправка...";
   resultEl.textContent = "";
-
-  const formData = new FormData();
-  formData.append("text", text);
-  if (tagId) formData.append("tag_id", tagId);
-  if (imageFile) formData.append("image", imageFile);
 
   try {
     const res = await fetch("/api/broadcast", { method: "POST", body: formData });
@@ -195,10 +210,7 @@ document.getElementById("broadcastSendBtn").addEventListener("click", async () =
       return;
     }
 
-    editor.innerHTML = "";
-    broadcastImageInput.value = "";
-    broadcastImagePreview.classList.add("hidden");
-    broadcastImagePreview.src = "";
+    clearBroadcastForm();
     resultEl.className = "text-sm text-gray-700";
     await pollBroadcastStatus(data.broadcast_id, resultEl);
   } catch {
@@ -208,6 +220,120 @@ document.getElementById("broadcastSendBtn").addEventListener("click", async () =
     btn.textContent = "Отправить рассылку";
   }
 });
+
+document.getElementById("broadcastScheduleBtn").addEventListener("click", async () => {
+  const { text, tagId, formData } = buildBroadcastFormData();
+  const resultEl = document.getElementById("broadcastResult");
+  const scheduleAtInput = document.getElementById("broadcastScheduleAt");
+
+  if (!text) {
+    resultEl.textContent = "Введите текст сообщения";
+    resultEl.className = "text-sm text-red-600";
+    return;
+  }
+  if (!scheduleAtInput.value) {
+    resultEl.textContent = "Укажите дату и время отправки";
+    resultEl.className = "text-sm text-red-600";
+    return;
+  }
+
+  const scheduledDate = new Date(scheduleAtInput.value);
+  if (Number.isNaN(scheduledDate.getTime()) || scheduledDate <= new Date()) {
+    resultEl.textContent = "Время рассылки должно быть в будущем";
+    resultEl.className = "text-sm text-red-600";
+    return;
+  }
+  formData.append("scheduled_at", scheduledDate.toISOString());
+
+  const confirmed = await confirmModal(
+    `Запланировать рассылку ${targetLabelFor(tagId)} на ${scheduledDate.toLocaleString("ru-RU")}?`,
+    "Запланировать"
+  );
+  if (!confirmed) return;
+
+  const btn = document.getElementById("broadcastScheduleBtn");
+  btn.disabled = true;
+  resultEl.textContent = "";
+
+  try {
+    const res = await fetch("/api/broadcast/schedule", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok) {
+      resultEl.className = "text-sm text-red-600";
+      resultEl.textContent = data.detail ?? "Не удалось запланировать рассылку";
+      return;
+    }
+
+    clearBroadcastForm();
+    scheduleAtInput.value = "";
+    resultEl.className = "text-sm text-gray-700";
+    resultEl.textContent = "Рассылка запланирована.";
+    await loadScheduledBroadcasts();
+  } catch {
+    showToast("Не удалось запланировать рассылку: ошибка сети");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+const STATUS_LABELS = {
+  pending: "Ожидает",
+  sending: "Отправляется",
+  done: "Готово",
+  cancelled: "Отменена",
+};
+
+export async function loadScheduledBroadcasts() {
+  const tbody = document.getElementById("scheduledBroadcastsBody");
+  const emptyEl = document.getElementById("scheduledBroadcastsEmpty");
+  let items;
+  try {
+    const res = await fetch("/api/broadcast/scheduled");
+    items = await res.json();
+  } catch {
+    return;
+  }
+
+  emptyEl.classList.toggle("hidden", items.length > 0);
+  tbody.innerHTML = items
+    .map((item) => {
+      const when = new Date(item.scheduled_at).toLocaleString("ru-RU");
+      const target = item.tag_name ? `Тег: ${escapeHtml(item.tag_name)}` : "Всем";
+      const preview = escapeHtml(item.text).slice(0, 60);
+      const statusLabel = STATUS_LABELS[item.status] ?? item.status;
+      const progress = item.total != null ? ` (${item.sent + item.blocked + item.failed}/${item.total})` : "";
+      const cancelBtn =
+        item.status === "pending"
+          ? `<button data-cancel-id="${item.id}" class="text-red-600 text-xs">Отменить</button>`
+          : "";
+      return `<tr class="border-t">
+        <td class="py-1 pr-2 whitespace-nowrap">${when}</td>
+        <td class="py-1 pr-2">${target}</td>
+        <td class="py-1 pr-2">${preview}</td>
+        <td class="py-1 pr-2">${statusLabel}${progress}</td>
+        <td class="py-1">${cancelBtn}</td>
+      </tr>`;
+    })
+    .join("");
+
+  tbody.querySelectorAll("[data-cancel-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const confirmed = await confirmModal("Отменить запланированную рассылку?", "Отменить");
+      if (!confirmed) return;
+      try {
+        const res = await fetch(`/api/broadcast/scheduled/${btn.dataset.cancelId}`, { method: "DELETE" });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          showToast(data.detail ?? "Не удалось отменить рассылку");
+          return;
+        }
+        await loadScheduledBroadcasts();
+      } catch {
+        showToast("Не удалось отменить рассылку: ошибка сети");
+      }
+    });
+  });
+}
 
 async function pollBroadcastStatus(broadcastId, resultEl) {
   while (true) {
