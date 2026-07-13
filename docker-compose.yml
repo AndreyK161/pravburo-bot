@@ -13,6 +13,46 @@ services:
       - postgres_data:/var/lib/postgresql/data
       # Optional: Auto-run SQL scripts on startup
       # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  bot:
+    build:
+      context: .
+      dockerfile: bot/Dockerfile
+    container_name: pravburo_bot
+    restart: always
+    env_file:
+      - bot/.env
+    environment:
+      # Внутри docker-сети база доступна по имени сервиса, а не localhost
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/bot_pravburo
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin_bot/backend/Dockerfile
+    container_name: pravburo_admin
+    restart: always
+    env_file:
+      - admin_bot/backend/.env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/bot_pravburo
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "127.0.0.1:8123:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
