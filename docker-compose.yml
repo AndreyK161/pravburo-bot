@@ -4,9 +4,9 @@ services:
     container_name: postgres_db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: bot_pravburo
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-bot_pravburo}
     ports:
       - "5432:5432"
     volumes:
@@ -14,7 +14,7 @@ services:
       # Optional: Auto-run SQL scripts on startup
       # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -28,8 +28,9 @@ services:
     env_file:
       - bot/.env
     environment:
-      # Внутри docker-сети база доступна по имени сервиса, а не localhost
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/bot_pravburo
+      # Внутри docker-сети база доступна по имени сервиса, а не localhost.
+      # Значения POSTGRES_* берутся из корневого .env (не в git).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-bot_pravburo}
     volumes:
       - ./data:/app/data
     depends_on:
@@ -45,7 +46,7 @@ services:
     env_file:
       - admin_bot/backend/.env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/bot_pravburo
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-bot_pravburo}
     volumes:
       - ./data:/app/data
     ports:
