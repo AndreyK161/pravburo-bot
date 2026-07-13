@@ -89,14 +89,6 @@ async def start_broadcast(
     return {"broadcast_id": broadcast_id, "total": len(recipients)}
 
 
-@router.get("/{broadcast_id}")
-async def get_broadcast_status(broadcast_id: str):
-    progress = BROADCASTS.get(broadcast_id)
-    if progress is None:
-        raise HTTPException(status_code=404, detail="Рассылка не найдена")
-    return progress
-
-
 async def _fetch_recipients(tag_id: int | None) -> list[tuple[int, int]]:
     query = "SELECT user_id, chat_id FROM users"
     params = []
@@ -249,6 +241,16 @@ async def cancel_scheduled_broadcast(broadcast_id: uuid.UUID):
     if result == "UPDATE 0":
         raise HTTPException(status_code=409, detail="Рассылку нельзя отменить — она уже отправляется или завершена")
     return {"ok": True}
+
+
+# Должен идти после /schedule и /scheduled — иначе FastAPI матчит их сюда
+# как {broadcast_id}, так как маршруты проверяются в порядке регистрации.
+@router.get("/{broadcast_id}")
+async def get_broadcast_status(broadcast_id: str):
+    progress = BROADCASTS.get(broadcast_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail="Рассылка не найдена")
+    return progress
 
 
 async def check_due_broadcasts() -> None:
