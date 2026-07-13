@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -50,9 +51,14 @@ jobs:
         working-directory: bot
         run: pytest -q
 
+      - name: Build docker images (sanity check)
+        run: |
+          docker build -f bot/Dockerfile -t pravburo-bot:ci .
+          docker build -f admin_bot/backend/Dockerfile -t pravburo-admin:ci .
+
   deploy:
     needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
@@ -66,9 +72,6 @@ jobs:
             set -euo pipefail
             cd /home/botuser/pravburo-bot
             git pull
-            bot/.venv/bin/pip install -r bot/requirements.txt
-            admin_bot/backend/.venv/bin/pip install -r admin_bot/backend/requirements.txt
-            cd admin_bot/backend
-            .venv/bin/alembic upgrade head
-            sudo systemctl restart pravburo-bot.service
-            sudo systemctl restart pravburo-admin.service
+            docker compose build bot admin
+            docker compose run --rm admin alembic upgrade head
+            docker compose up -d db bot admin
