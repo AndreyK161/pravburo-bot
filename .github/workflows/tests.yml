@@ -37,16 +37,17 @@ jobs:
           python-version: "3.12"
 
       - name: Install bot dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r bot/requirements.txt
 
       - name: Install admin backend dependencies (нужны для alembic)
-        run: pip install -r admin/backend/requirements.txt
+        run: pip install -r admin_bot/backend/requirements.txt
 
       - name: Run migrations
-        working-directory: admin/backend
+        working-directory: admin_bot/backend
         run: alembic upgrade head
 
       - name: Run tests
+        working-directory: bot
         run: pytest -q
 
   deploy:
@@ -65,9 +66,9 @@ jobs:
             set -euo pipefail
             cd /home/botuser/pravburo-bot
             git pull
-            .venv/bin/pip install -r requirements.txt
-            admin/backend/.venv/bin/pip install -r admin/backend/requirements.txt
-            cd admin/backend
+            bot/.venv/bin/pip install -r bot/requirements.txt
+            admin_bot/backend/.venv/bin/pip install -r admin_bot/backend/requirements.txt
+            cd admin_bot/backend
             .venv/bin/alembic upgrade head
             sudo systemctl restart pravburo-bot.service
             sudo systemctl restart pravburo-admin.service

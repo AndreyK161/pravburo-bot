@@ -7,7 +7,7 @@ DB_POOL: asyncpg.Pool | None = None
 
 
 async def init_db_pool() -> None:
-    # Схема БД (users, tags, ...) управляется alembic-миграциями из admin/backend,
+    # Схема БД (users, tags, ...) управляется alembic-миграциями из admin_bot/backend,
     # бот только открывает пул и ожидает, что таблицы уже созданы.
     global DB_POOL
     DB_POOL = await asyncpg.create_pool(DATABASE_URL)

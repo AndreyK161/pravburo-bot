@@ -5,7 +5,7 @@ PROJECT_DIR="/home/botuser/pravburo-bot"
 CHAT_ID="4367406433"
 
 cd "$PROJECT_DIR"
-source .env  # даёт BOT_TOKEN
+source bot/.env  # даёт BOT_TOKEN
 
 DUMP_FILE="$(date +%F)_dump.sql"
 
