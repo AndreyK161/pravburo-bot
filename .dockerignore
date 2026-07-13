@@ -1,0 +1,12 @@
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.env
+.git
+.idea
+.claude
+data
+deploy
+*.sql
+.DS_Store
