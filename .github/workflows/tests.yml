@@ -28,6 +28,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bot_pravburo
       BOT_TOKEN: test-token
+      VK_TOKEN: test-token
       SESSION_SECRET_KEY: test-secret
 
     steps:
@@ -40,6 +41,9 @@ jobs:
       - name: Install tg_bot dependencies
         run: pip install -r tg_bot/requirements.txt
 
+      - name: Install vk_bot dependencies
+        run: pip install -r vk_bot/requirements.txt
+
       - name: Install admin backend dependencies (нужны для alembic)
         run: pip install -r admin_bot/backend/requirements.txt
 
@@ -47,13 +51,18 @@ jobs:
         working-directory: admin_bot/backend
         run: alembic upgrade head
 
-      - name: Run tests
+      - name: Run tg_bot tests
         working-directory: tg_bot
+        run: pytest -q
+
+      - name: Run vk_bot tests
+        working-directory: vk_bot
         run: pytest -q
 
       - name: Build docker images (sanity check)
         run: |
-          docker build -f bot/Dockerfile -t pravburo-bot:ci .
+          docker build -f tg_bot/Dockerfile -t pravburo-bot:ci .
+          docker build -f vk_bot/Dockerfile -t pravburo-vk-bot:ci .
           docker build -f admin_bot/backend/Dockerfile -t pravburo-admin:ci .
 
   deploy:
@@ -72,6 +81,6 @@ jobs:
             set -euo pipefail
             cd /home/botuser/pravburo-bot
             git pull
-            docker compose build bot admin
+            docker compose build bot vk_bot admin
             docker compose run --rm admin alembic upgrade head
-            docker compose up -d db bot admin
+            docker compose up -d db bot vk_bot admin
