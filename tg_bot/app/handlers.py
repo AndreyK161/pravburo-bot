@@ -36,7 +36,7 @@ async def command_start_handler(message: Message, bot: Bot, command: CommandObje
     touch(message.from_user.id)
     AWAITING_INPUT.pop(message.from_user.id, None)
     # command.args — это то, что стоит после /start (метка из ссылки вида
-    # t.me/bot?start=YDX-DIRECT). При повторных заходах не перезаписывается.
+    # t.me/tg_bot?start=YDX-DIRECT). При повторных заходах не перезаписывается.
     await upsert_user(message.from_user.id, message.chat.id, message.from_user.username, command.args)
     await set_tag_by_name_if_untagged(message.from_user.id, TAG_CONSULTATION_STARTED)
     await render_block(bot, message.chat.id, message.from_user.id, SCENARIO["start"], replace=False)

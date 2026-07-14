@@ -22,11 +22,11 @@ services:
   bot:
     build:
       context: .
-      dockerfile: bot/Dockerfile
+      dockerfile: tg_bot/Dockerfile
     container_name: pravburo_bot
     restart: always
     env_file:
-      - bot/.env
+      - tg_bot/.env
     environment:
       # Внутри docker-сети база доступна по имени сервиса, а не localhost.
       # Значения POSTGRES_* берутся из корневого .env (не в git).

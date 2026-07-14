@@ -55,7 +55,7 @@ class AntiSpamMiddleware(BaseMiddleware):
         if len(times) > ANTISPAM_MAX_EVENTS:
             SPAM_MUTED_UNTIL[user_id] = now + ANTISPAM_MUTE_SECONDS
             times.clear()
-            bot = data.get("bot")
+            bot = data.get("tg_bot")
             chat_id = _chat_id(event)
             if bot is not None and chat_id is not None:
                 await bot.send_message(

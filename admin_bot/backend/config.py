@@ -29,11 +29,11 @@ SCENARIO_BACKUP_DIR = DATA_DIR / "scenario_backups"
 SCENARIO_GRAPH_POSITIONS_PATH = DATA_DIR / "scenario_graph_positions.json"
 FILES_DIR = DATA_DIR / "files"
 
-# Должно совпадать с bot/app/config.py (USER_FIELD_COLUMNS) и bot/app/validators.py (VALIDATORS)
+# Должно совпадать с tg_bot/app/config.py (USER_FIELD_COLUMNS) и tg_bot/app/validators.py (VALIDATORS)
 # бота — это те же самые белые списки, продублированные тут для валидации сценария.
 SAVE_AS_FIELDS = ["name", "phone", "region"]
 VALIDATOR_NAMES = ["phone"]
-# set_field у кнопок (см. bot/app/config.py USER_FIELD_COLUMNS) — отдельно от SAVE_AS_FIELDS,
+# set_field у кнопок (см. tg_bot/app/config.py USER_FIELD_COLUMNS) — отдельно от SAVE_AS_FIELDS,
 # так как это не поле input-блока, а значение, которое запоминает нажатие кнопки.
 BUTTON_SET_FIELDS = ["has_property"]
 
@@ -46,7 +46,7 @@ BLOCK_REQUIRED_FIELDS = {
     "delay": ["seconds", "next"],
 }
 
-# Должно совпадать с bot/app/config.py — id блоков, при входе в которые бот
+# Должно совпадать с tg_bot/app/config.py — id блоков, при входе в которые бот
 # автоматически проставляет юзеру тег (используется страницей графа сценария).
 CONSULTATION_START_BLOCK = "consultation"
 CONSULTATION_DONE_BLOCK = "consultation_contact"

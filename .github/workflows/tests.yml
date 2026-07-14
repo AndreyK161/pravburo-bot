@@ -37,8 +37,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install bot dependencies
-        run: pip install -r bot/requirements.txt
+      - name: Install tg_bot dependencies
+        run: pip install -r tg_bot/requirements.txt
 
       - name: Install admin backend dependencies (нужны для alembic)
         run: pip install -r admin_bot/backend/requirements.txt
@@ -48,7 +48,7 @@ jobs:
         run: alembic upgrade head
 
       - name: Run tests
-        working-directory: bot
+        working-directory: tg_bot
         run: pytest -q
 
       - name: Build docker images (sanity check)
