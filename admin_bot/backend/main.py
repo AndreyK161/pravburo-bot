@@ -37,10 +37,12 @@ async def _scheduler_loop() -> None:
 async def lifespan(app: FastAPI):
     await database.init_db_pool()
     await bot_client.init_bot()
+    await bot_client.init_vk_api()
     scheduler_task = asyncio.create_task(_scheduler_loop())
     yield
     scheduler_task.cancel()
     await bot_client.close_bot()
+    await bot_client.close_vk_api()
     await database.close_db_pool()
 
 

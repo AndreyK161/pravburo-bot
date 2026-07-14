@@ -17,6 +17,20 @@ export async function loadBroadcastTags() {
     .join("");
 }
 
+function setupPlatformToggle(id) {
+  const btn = document.getElementById(id);
+  btn.addEventListener("click", () => {
+    const active = btn.dataset.platformToggle === "true";
+    btn.dataset.platformToggle = active ? "false" : "true";
+  });
+}
+setupPlatformToggle("broadcastSendTg");
+setupPlatformToggle("broadcastSendVk");
+
+function isPlatformActive(id) {
+  return document.getElementById(id).dataset.platformToggle === "true";
+}
+
 const editor = document.getElementById("broadcastText");
 
 document.getElementById("broadcastBoldBtn").addEventListener("click", () => {
@@ -156,19 +170,29 @@ broadcastImageInput.addEventListener("change", () => {
 function buildBroadcastFormData() {
   const text = editorToTelegramHtml();
   const tagId = document.getElementById("broadcastTag").value;
+  const sendTg = isPlatformActive("broadcastSendTg");
+  const sendVk = isPlatformActive("broadcastSendVk");
   const imageFile = broadcastImageInput.files[0] ?? null;
 
   const formData = new FormData();
   formData.append("text", text);
   if (tagId) formData.append("tag_id", tagId);
+  formData.append("send_tg", sendTg);
+  formData.append("send_vk", sendVk);
   if (imageFile) formData.append("image", imageFile);
-  return { text, tagId, formData };
+  return { text, tagId, sendTg, sendVk, formData };
 }
 
 function targetLabelFor(tagId) {
   return tagId
     ? document.getElementById("broadcastTag").selectedOptions[0].textContent
     : "всем пользователям";
+}
+
+function platformsLabelFor(sendTg, sendVk) {
+  if (sendTg && sendVk) return "Telegram + VK";
+  if (sendVk) return "VK";
+  return "Telegram";
 }
 
 function clearBroadcastForm() {
@@ -179,7 +203,7 @@ function clearBroadcastForm() {
 }
 
 document.getElementById("broadcastSendBtn").addEventListener("click", async () => {
-  const { text, tagId, formData } = buildBroadcastFormData();
+  const { text, tagId, sendTg, sendVk, formData } = buildBroadcastFormData();
   const resultEl = document.getElementById("broadcastResult");
 
   if (!text) {
@@ -187,9 +211,14 @@ document.getElementById("broadcastSendBtn").addEventListener("click", async () =
     resultEl.className = "text-sm text-red-600";
     return;
   }
+  if (!sendTg && !sendVk) {
+    resultEl.textContent = "Выберите хотя бы одну платформу (Telegram или VK)";
+    resultEl.className = "text-sm text-red-600";
+    return;
+  }
 
   const confirmed = await confirmModal(
-    `Отправить рассылку ${targetLabelFor(tagId)}?\n\nЭто действие необратимо.`,
+    `Отправить рассылку ${targetLabelFor(tagId)} (${platformsLabelFor(sendTg, sendVk)})?\n\nЭто действие необратимо.`,
     "Отправить"
   );
   if (!confirmed) return;
@@ -222,12 +251,17 @@ document.getElementById("broadcastSendBtn").addEventListener("click", async () =
 });
 
 document.getElementById("broadcastScheduleBtn").addEventListener("click", async () => {
-  const { text, tagId, formData } = buildBroadcastFormData();
+  const { text, tagId, sendTg, sendVk, formData } = buildBroadcastFormData();
   const resultEl = document.getElementById("broadcastResult");
   const scheduleAtInput = document.getElementById("broadcastScheduleAt");
 
   if (!text) {
     resultEl.textContent = "Введите текст сообщения";
+    resultEl.className = "text-sm text-red-600";
+    return;
+  }
+  if (!sendTg && !sendVk) {
+    resultEl.textContent = "Выберите хотя бы одну платформу (Telegram или VK)";
     resultEl.className = "text-sm text-red-600";
     return;
   }
@@ -246,7 +280,7 @@ document.getElementById("broadcastScheduleBtn").addEventListener("click", async 
   formData.append("scheduled_at", scheduledDate.toISOString());
 
   const confirmed = await confirmModal(
-    `Запланировать рассылку ${targetLabelFor(tagId)} на ${scheduledDate.toLocaleString("ru-RU")}?`,
+    `Запланировать рассылку ${targetLabelFor(tagId)} (${platformsLabelFor(sendTg, sendVk)}) на ${scheduledDate.toLocaleString("ru-RU")}?`,
     "Запланировать"
   );
   if (!confirmed) return;
@@ -299,6 +333,7 @@ export async function loadScheduledBroadcasts() {
     .map((item) => {
       const when = new Date(item.scheduled_at).toLocaleString("ru-RU");
       const target = item.tag_name ? `Тег: ${escapeHtml(item.tag_name)}` : "Всем";
+      const platforms = platformsLabelFor(item.send_tg, item.send_vk);
       const preview = escapeHtml(item.text).slice(0, 60);
       const statusLabel = STATUS_LABELS[item.status] ?? item.status;
       const progress = item.total != null ? ` (${item.sent + item.blocked + item.failed}/${item.total})` : "";
@@ -309,6 +344,7 @@ export async function loadScheduledBroadcasts() {
       return `<tr class="border-t">
         <td class="py-1 pr-2 whitespace-nowrap">${when}</td>
         <td class="py-1 pr-2">${target}</td>
+        <td class="py-1 pr-2">${platforms}</td>
         <td class="py-1 pr-2">${preview}</td>
         <td class="py-1 pr-2">${statusLabel}${progress}</td>
         <td class="py-1">${cancelBtn}</td>

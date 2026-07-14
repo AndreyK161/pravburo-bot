@@ -7,5 +7,6 @@ alembic==1.14.0
 SQLAlchemy==2.0.36
 psycopg2-binary==2.9.10
 aiogram==3.29.1
+vkbottle==4.10.0
 bcrypt==4.2.1
 itsdangerous==2.2.0

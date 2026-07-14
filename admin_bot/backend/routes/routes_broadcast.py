@@ -1,4 +1,8 @@
 import asyncio
+import html
+import random
+import re
+import traceback
 import uuid
 from datetime import datetime, timezone
 from typing import Awaitable, Callable
@@ -6,6 +10,8 @@ from typing import Awaitable, Callable
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter, TelegramAPIError
 from aiogram.types import BufferedInputFile
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from vkbottle.exception_factory import VKAPIError
+from vkbottle.tools import PhotoMessageUploader
 
 import bot_client
 import database
@@ -18,6 +24,25 @@ router = APIRouter(prefix="/api/broadcast", tags=["broadcast"])
 MAX_PHOTO_CAPTION_LENGTH = 1024
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
+# Платформа — белый список, имя таблицы нельзя подставлять в SQL как есть.
+PLATFORM_TABLES = {"tg": "tg_users", "vk": "vk_users"}
+
+# VK messages.send кидает эти коды, когда пользователь запретил сообщения
+# сообщества (в чёрном списке / не разрешил личные сообщения) — это аналог
+# TelegramForbiddenError, а не разовый сбой сети.
+VK_BLOCKED_ERROR_CODES = {900, 901, 902}
+
+_VK_LINK_RE = re.compile(r'<a\s+href="([^"]*)"[^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def html_to_vk_text(text: str) -> str:
+    """Грубо переводит Telegram-HTML редактора рассылок в обычный текст для VK —
+    VK Bot API messages.send не рендерит произвольную HTML-разметку."""
+    text = _VK_LINK_RE.sub(lambda m: f"{m.group(2)} ({m.group(1)})", text)
+    text = _HTML_TAG_RE.sub("", text)
+    return html.unescape(text)
+
 # Рассылка на тысячи получателей идёт минутами — держать HTTP-запрос
 # открытым всё это время нельзя (упрётся в таймаут nginx/браузера).
 # Поэтому отправка уходит в фоновую задачу, а статус отдаём отдельным
@@ -29,11 +54,15 @@ BROADCASTS: dict[str, dict] = {}
 async def _parse_broadcast_input(
     text: str,
     tag_id: str,
+    send_tg: bool,
+    send_vk: bool,
     image: UploadFile | None,
-) -> tuple[str, int | None, bytes | None, str | None]:
+) -> tuple[str, int | None, bool, bool, bytes | None, str | None]:
     text = text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="Текст сообщения не может быть пустым")
+    if not send_tg and not send_vk:
+        raise HTTPException(status_code=422, detail="Выберите хотя бы одну платформу для рассылки")
 
     tag_id_value = int(tag_id) if tag_id else None
 
@@ -42,7 +71,7 @@ async def _parse_broadcast_input(
     if image is not None and image.filename:
         if image.content_type not in ALLOWED_IMAGE_TYPES:
             raise HTTPException(status_code=422, detail="Изображение должно быть JPEG, PNG или WEBP")
-        if len(text) > MAX_PHOTO_CAPTION_LENGTH:
+        if send_tg and len(text) > MAX_PHOTO_CAPTION_LENGTH:
             raise HTTPException(
                 status_code=422,
                 detail=(
@@ -53,18 +82,22 @@ async def _parse_broadcast_input(
         image_bytes = await image.read()
         image_filename = image.filename
 
-    return text, tag_id_value, image_bytes, image_filename
+    return text, tag_id_value, send_tg, send_vk, image_bytes, image_filename
 
 
 @router.post("")
 async def start_broadcast(
     text: str = Form(...),
     tag_id: str = Form(""),
+    send_tg: bool = Form(True),
+    send_vk: bool = Form(False),
     image: UploadFile | None = File(None),
 ):
-    text, tag_id_value, image_bytes, image_filename = await _parse_broadcast_input(text, tag_id, image)
+    text, tag_id_value, send_tg, send_vk, image_bytes, image_filename = await _parse_broadcast_input(
+        text, tag_id, send_tg, send_vk, image
+    )
 
-    recipients = await _fetch_recipients(tag_id_value)
+    recipients = await _fetch_recipients(tag_id_value, send_tg, send_vk)
 
     broadcast_id = uuid.uuid4().hex
     progress = {
@@ -89,20 +122,26 @@ async def start_broadcast(
     return {"broadcast_id": broadcast_id, "total": len(recipients)}
 
 
-async def _fetch_recipients(tag_id: int | None) -> list[tuple[int, int]]:
-    query = "SELECT user_id, chat_id FROM users"
-    params = []
-    if tag_id is not None:
-        query += " WHERE tag_id = $1"
-        params.append(tag_id)
+async def _fetch_recipients(tag_id: int | None, send_tg: bool, send_vk: bool) -> list[tuple[str, int, int]]:
+    platforms = [p for p, enabled in (("tg", send_tg), ("vk", send_vk)) if enabled]
+    if not platforms:
+        return []
+
+    tag_filter = " WHERE tag_id = $1" if tag_id is not None else ""
+    selects = [
+        f"SELECT '{platform}' AS platform, user_id, chat_id FROM {PLATFORM_TABLES[platform]}{tag_filter}"
+        for platform in platforms
+    ]
+    query = " UNION ALL ".join(selects)
+    params = [tag_id] if tag_id is not None else []
 
     async with database.DB_POOL.acquire() as conn:
         rows = await conn.fetch(query, *params)
-    return [(row["user_id"], row["chat_id"]) for row in rows]
+    return [(row["platform"], row["user_id"], row["chat_id"]) for row in rows]
 
 
 async def _run_broadcast(
-    recipients: list[tuple[int, int]],
+    recipients: list[tuple[str, int, int]],
     text: str,
     image_bytes: bytes | None,
     image_filename: str | None,
@@ -117,18 +156,24 @@ async def _run_broadcast(
     blocked = 0
     failed = 0
 
-    # Загружаем картинку в Telegram один раз, дальше рассылаем по её file_id —
-    # иначе на каждого из тысяч получателей заново гнали бы те же байты.
+    vk_text = html_to_vk_text(text)
+
+    # Загружаем картинку в Telegram/VK один раз, дальше рассылаем по её file_id/
+    # attachment-строке — иначе на каждого из тысяч получателей заново гнали бы те же байты.
     photo_file_id: str | None = None
-    # Ограничивает число одновременных запросов к Telegram — защита от
+    vk_photo_attachment: str | None = None
+    # Ограничивает число одновременных запросов к Telegram/VK — защита от
     # лавины in-flight запросов, если API вдруг начнёт отвечать медленно.
     semaphore = asyncio.Semaphore(BROADCAST_MAX_CONCURRENCY)
 
-    async def mark_blocked(user_id: int) -> None:
+    async def mark_blocked(platform: str, user_id: int) -> None:
+        table = PLATFORM_TABLES[platform]
         async with database.DB_POOL.acquire() as conn:
-            await conn.execute("UPDATE users SET is_blocked = true, updated_at = now() WHERE user_id = $1", user_id)
+            await conn.execute(
+                f"UPDATE {table} SET is_blocked = true, updated_at = now() WHERE user_id = $1", user_id
+            )
 
-    async def send_one(chat_id: int) -> None:
+    async def send_one_tg(chat_id: int) -> None:
         nonlocal photo_file_id
         if image_bytes is not None:
             photo = photo_file_id or BufferedInputFile(image_bytes, filename=image_filename)
@@ -138,43 +183,67 @@ async def _run_broadcast(
         else:
             await bot_client.bot.send_message(chat_id, text, parse_mode="HTML")
 
-    async def send_with_retry(user_id: int, chat_id: int) -> None:
+    async def send_one_vk(chat_id: int) -> None:
+        nonlocal vk_photo_attachment
+        kwargs = {"peer_id": chat_id, "message": vk_text, "random_id": random.getrandbits(31)}
+        if image_bytes is not None:
+            if vk_photo_attachment is None:
+                vk_photo_attachment = await PhotoMessageUploader(bot_client.vk_api).upload(
+                    image_bytes, peer_id=chat_id
+                )
+            kwargs["attachment"] = vk_photo_attachment
+        await bot_client.vk_api.messages.send(**kwargs)
+
+    async def send_with_retry(platform: str, user_id: int, chat_id: int) -> None:
         nonlocal sent, blocked, failed
         try:
-            await send_one(chat_id)
+            if platform == "tg":
+                try:
+                    await send_one_tg(chat_id)
+                except TelegramRetryAfter as e:
+                    await asyncio.sleep(e.retry_after)
+                    await send_one_tg(chat_id)
+            else:
+                await send_one_vk(chat_id)
             sent += 1
-        except TelegramRetryAfter as e:
-            await asyncio.sleep(e.retry_after)
-            try:
-                await send_one(chat_id)
-                sent += 1
-            except TelegramAPIError:
-                failed += 1
         except TelegramForbiddenError:
             blocked += 1
-            await mark_blocked(user_id)
+            await mark_blocked(platform, user_id)
         except TelegramAPIError:
             failed += 1
+        except VKAPIError as e:
+            if e.code in VK_BLOCKED_ERROR_CODES:
+                blocked += 1
+                await mark_blocked(platform, user_id)
+            else:
+                failed += 1
+        except Exception:
+            # Любая непредвиденная ошибка (например, VK_TOKEN не настроен и
+            # vk_api падает с TypeError, а не VKAPIError) не должна ронять всю
+            # фоновую рассылку молча — иначе on_done() никогда не вызовется,
+            # и прогресс в админке зависнет навсегда на "0 из N".
+            failed += 1
+            traceback.print_exc()
         await on_progress(sent, blocked, failed)
 
-    async def worker(user_id: int, chat_id: int) -> None:
+    async def worker(platform: str, user_id: int, chat_id: int) -> None:
         async with semaphore:
-            await send_with_retry(user_id, chat_id)
+            await send_with_retry(platform, user_id, chat_id)
 
     # Первого получателя отправляем отдельно и ждём результата: если есть
     # картинка, нужно успеть получить её file_id до того, как остальные
     # задачи стартуют параллельно — иначе каждая из них попытается заново
     # закачать те же байты вместо переиспользования уже загруженного файла.
-    first_user_id, first_chat_id = recipients[0]
-    await send_with_retry(first_user_id, first_chat_id)
+    first_platform, first_user_id, first_chat_id = recipients[0]
+    await send_with_retry(first_platform, first_user_id, first_chat_id)
 
     # Запускаем отправки с ограничением по темпу (не быстрее лимита Telegram
     # на новые сообщения в секунду), но не ждём ответа перед стартом
     # следующей — задержка сети у разных запросов перекрывается.
     min_interval = 1 / BROADCAST_RATE_PER_SECOND
     tasks = []
-    for user_id, chat_id in recipients[1:]:
-        tasks.append(asyncio.create_task(worker(user_id, chat_id)))
+    for platform, user_id, chat_id in recipients[1:]:
+        tasks.append(asyncio.create_task(worker(platform, user_id, chat_id)))
         await asyncio.sleep(min_interval)
 
     if tasks:
@@ -187,10 +256,14 @@ async def _run_broadcast(
 async def schedule_broadcast(
     text: str = Form(...),
     tag_id: str = Form(""),
+    send_tg: bool = Form(True),
+    send_vk: bool = Form(False),
     scheduled_at: str = Form(...),
     image: UploadFile | None = File(None),
 ):
-    text, tag_id_value, image_bytes, image_filename = await _parse_broadcast_input(text, tag_id, image)
+    text, tag_id_value, send_tg, send_vk, image_bytes, image_filename = await _parse_broadcast_input(
+        text, tag_id, send_tg, send_vk, image
+    )
 
     try:
         scheduled_at_value = datetime.fromisoformat(scheduled_at)
@@ -205,10 +278,11 @@ async def schedule_broadcast(
     async with database.DB_POOL.acquire() as conn:
         await conn.execute(
             """
-            INSERT INTO scheduled_broadcasts (id, text, tag_id, image_bytes, image_filename, scheduled_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO scheduled_broadcasts
+                (id, text, tag_id, send_tg, send_vk, image_bytes, image_filename, scheduled_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             """,
-            broadcast_id, text, tag_id_value, image_bytes, image_filename, scheduled_at_value,
+            broadcast_id, text, tag_id_value, send_tg, send_vk, image_bytes, image_filename, scheduled_at_value,
         )
 
     return {"id": str(broadcast_id)}
@@ -219,8 +293,8 @@ async def list_scheduled_broadcasts():
     async with database.DB_POOL.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT sb.id, sb.text, sb.tag_id, t.name AS tag_name, sb.scheduled_at, sb.status,
-                   sb.total, sb.sent, sb.blocked, sb.failed, sb.created_at
+            SELECT sb.id, sb.text, sb.tag_id, t.name AS tag_name, sb.send_tg, sb.send_vk,
+                   sb.scheduled_at, sb.status, sb.total, sb.sent, sb.blocked, sb.failed, sb.created_at
             FROM scheduled_broadcasts sb
             LEFT JOIN tags t ON t.id = sb.tag_id
             WHERE sb.status IN ('pending', 'sending')
@@ -272,11 +346,12 @@ async def check_due_broadcasts() -> None:
 async def _send_scheduled_broadcast(broadcast_id: uuid.UUID) -> None:
     async with database.DB_POOL.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT text, tag_id, image_bytes, image_filename FROM scheduled_broadcasts WHERE id = $1",
+            "SELECT text, tag_id, send_tg, send_vk, image_bytes, image_filename "
+            "FROM scheduled_broadcasts WHERE id = $1",
             broadcast_id,
         )
 
-    recipients = await _fetch_recipients(row["tag_id"])
+    recipients = await _fetch_recipients(row["tag_id"], row["send_tg"], row["send_vk"])
 
     async with database.DB_POOL.acquire() as conn:
         await conn.execute(

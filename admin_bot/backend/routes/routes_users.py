@@ -16,6 +16,13 @@ FILTERABLE_FIELDS = {
     "user_id": "u.user_id::TEXT",
 }
 
+# Платформа тоже белый список - имя таблицы нельзя подставлять в SQL как есть.
+PLATFORM_TABLES = {"tg": "tg_users", "vk": "vk_users"}
+
+USERS_UNION = " UNION ALL ".join(
+    f"SELECT *, '{platform}' AS platform FROM {table}" for platform, table in PLATFORM_TABLES.items()
+)
+
 
 class TagAssignIn(BaseModel):
     tag_id: int | None
@@ -24,6 +31,7 @@ class TagAssignIn(BaseModel):
 @router.get("")
 async def list_users(
     tag_id: int | None = None,
+    platform: str | None = None,
     field: str | None = None,
     value: str | None = None,
     page: int = 1,
@@ -34,6 +42,12 @@ async def list_users(
 
     conditions = []
     params = []
+
+    if platform is not None:
+        if platform not in PLATFORM_TABLES:
+            raise HTTPException(status_code=422, detail=f"Неизвестная платформа: {platform}")
+        params.append(platform)
+        conditions.append(f"u.platform = ${len(params)}")
 
     if tag_id is not None:
         params.append(tag_id)
@@ -48,7 +62,7 @@ async def list_users(
 
     where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
-    count_query = f"SELECT COUNT(*) FROM users u {where_clause}"
+    count_query = f"SELECT COUNT(*) FROM ({USERS_UNION}) u {where_clause}"
 
     params.append(page_size)
     limit_idx = len(params)
@@ -56,9 +70,9 @@ async def list_users(
     offset_idx = len(params)
 
     list_query = f"""
-        SELECT u.user_id, u.username, u.name, u.phone, u.region, u.source, u.current_stage,
+        SELECT u.platform, u.user_id, u.username, u.name, u.phone, u.region, u.source, u.current_stage,
                u.has_property, u.is_blocked, u.created_at, u.updated_at, u.tag_id, t.name AS tag_name
-        FROM users u
+        FROM ({USERS_UNION}) u
         LEFT JOIN tags t ON t.id = u.tag_id
         {where_clause}
         ORDER BY u.created_at DESC
@@ -77,15 +91,19 @@ async def list_users(
     }
 
 
-@router.patch("/{user_id}/tag")
-async def assign_tag(user_id: int, body: TagAssignIn):
+@router.patch("/{platform}/{user_id}/tag")
+async def assign_tag(platform: str, user_id: int, body: TagAssignIn):
+    table = PLATFORM_TABLES.get(platform)
+    if table is None:
+        raise HTTPException(status_code=422, detail=f"Неизвестная платформа: {platform}")
+
     async with database.DB_POOL.acquire() as conn:
         if body.tag_id is not None:
             tag = await conn.fetchrow("SELECT id FROM tags WHERE id = $1", body.tag_id)
             if not tag:
                 raise HTTPException(status_code=404, detail="Тег не найден")
         result = await conn.execute(
-            "UPDATE users SET tag_id = $1, updated_at = now() WHERE user_id = $2",
+            f"UPDATE {table} SET tag_id = $1, updated_at = now() WHERE user_id = $2",
             body.tag_id, user_id,
         )
     if result == "UPDATE 0":

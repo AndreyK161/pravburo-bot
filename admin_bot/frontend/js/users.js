@@ -26,6 +26,12 @@ function yesNoHtml(value) {
   return '<span class="text-gray-300">—</span>';
 }
 
+function platformBadgeHtml(platform) {
+  return platform === "vk"
+    ? '<span class="platform-badge platform-badge-vk">VK</span>'
+    : '<span class="platform-badge platform-badge-tg">TG</span>';
+}
+
 function tagSelectHtml(userTagId) {
   const options = ['<option value="">—</option>']
     .concat(
@@ -64,7 +70,8 @@ export async function loadUsers() {
   tbody.innerHTML = users
     .map(
       (u) => `
-      <tr class="border-b last:border-0" data-user-id="${u.user_id}">
+      <tr class="border-b last:border-0" data-user-id="${u.user_id}" data-platform="${u.platform}">
+        <td class="py-2 px-3" data-label="Платформа">${platformBadgeHtml(u.platform)}</td>
         <td class="py-2 px-3" data-label="ID">${u.user_id}</td>
         <td class="py-2 px-3" data-label="Username">${escapeHtml(u.username ?? "")}</td>
         <td class="py-2 px-3" data-label="Имя">${escapeHtml(u.name ?? "")}</td>
@@ -84,10 +91,11 @@ export async function loadUsers() {
     select.addEventListener("change", async (e) => {
       const row = e.target.closest("tr");
       const userId = row.dataset.userId;
+      const platform = row.dataset.platform;
       const previousValue = e.target.dataset.previousValue ?? "";
       const tagId = e.target.value ? Number(e.target.value) : null;
       try {
-        const res = await fetch(`/api/users/${userId}/tag`, {
+        const res = await fetch(`/api/users/${platform}/${userId}/tag`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ tag_id: tagId }),

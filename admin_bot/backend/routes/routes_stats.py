@@ -10,7 +10,11 @@ async def get_sources_stats():
     async with database.DB_POOL.acquire() as conn:
         rows = await conn.fetch("""
             SELECT COALESCE(source, 'unknown') AS source, COUNT(*) AS users_count
-            FROM users
+            FROM (
+                SELECT source FROM tg_users
+                UNION ALL
+                SELECT source FROM vk_users
+            ) u
             GROUP BY source
             ORDER BY users_count DESC
         """)

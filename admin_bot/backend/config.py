@@ -7,6 +7,7 @@ load_dotenv()
 
 DATABASE_URL = getenv("DATABASE_URL")
 BOT_TOKEN = getenv("BOT_TOKEN")
+VK_TOKEN = getenv("VK_TOKEN")
 
 # Telegram Bot API разрешает ~30 сообщений/сек суммарно разным чатам.
 # Держим темп запуска новых отправок чуть ниже лимита (с запасом на джиттер

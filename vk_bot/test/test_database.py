@@ -33,7 +33,7 @@ async def test_upsert_user_writes_expected_args(fake_pool):
     await database.upsert_user(user_id=1, chat_id=2, username="tester", source="YDX-DIRECT")
 
     query, args = fake_pool.conn.calls[0]
-    assert "INSERT INTO tg_users" in query
+    assert "INSERT INTO vk_users" in query
     assert args == (1, 2, "tester", "YDX-DIRECT")
 
 
@@ -41,7 +41,7 @@ async def test_upsert_user_does_not_overwrite_source_on_conflict(fake_pool):
     await database.upsert_user(user_id=1, chat_id=2, username="tester", source="YDX-DIRECT")
 
     query, _ = fake_pool.conn.calls[0]
-    # source сознательно не входит в SET — иначе повторный /start затирал бы метку
+    # source сознательно не входит в SET — иначе повторный старт затирал бы метку
     assert "SET chat_id = $2, username = $3, updated_at = now()" in query
     assert "source" not in query.split("SET", 1)[1]
 
@@ -51,7 +51,7 @@ async def test_save_user_field_allowed_column_writes(fake_pool):
 
     assert len(fake_pool.conn.calls) == 1
     query, args = fake_pool.conn.calls[0]
-    assert "UPDATE tg_users SET phone = $1" in query
+    assert "UPDATE vk_users SET phone = $1" in query
     assert args == ("+79990001122", 1)
 
 

@@ -37,6 +37,22 @@ services:
       db:
         condition: service_healthy
 
+  vk_bot:
+    build:
+      context: .
+      dockerfile: vk_bot/Dockerfile
+    container_name: pravburo_vk_bot
+    restart: always
+    env_file:
+      - vk_bot/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-bot_pravburo}
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+
   admin:
     build:
       context: .

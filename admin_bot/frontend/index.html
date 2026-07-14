@@ -101,6 +101,7 @@
       <table class="responsive-table w-full text-sm sm:whitespace-nowrap">
         <thead>
           <tr class="text-left text-gray-500 border-b">
+            <th class="py-2 px-3">Платформа</th>
             <th class="py-2 px-3">ID</th>
             <th class="py-2 px-3">Username</th>
             <th class="py-2 px-3">Имя</th>
@@ -162,6 +163,20 @@
       </div>
 
       <div>
+        <label class="text-sm text-gray-600 block mb-1">Куда отправлять:</label>
+        <div class="flex gap-2">
+          <button type="button" id="broadcastSendTg" data-platform-toggle="true" class="platform-toggle">
+            <span class="platform-toggle-dot"></span>
+            Telegram
+          </button>
+          <button type="button" id="broadcastSendVk" data-platform-toggle="false" class="platform-toggle">
+            <span class="platform-toggle-dot"></span>
+            VK
+          </button>
+        </div>
+      </div>
+
+      <div>
         <label class="text-sm text-gray-600 block mb-1">Текст сообщения:</label>
         <div class="flex items-center gap-2 mb-1">
           <button type="button" id="broadcastBoldBtn" class="border rounded-md px-2.5 py-1 text-sm font-bold" title="Жирный (Ctrl+B)">Ж</button>
@@ -175,6 +190,7 @@
         <p class="text-xs text-gray-400 mt-1">
           Можно вставить текст — жирный и курсив сохранятся но может не работать с тг.
           Для ссылок используйте кнопку 🔗 — вставка ссылок из Telegram ненадёжна.
+          В VK форматирование (жирный/курсив/ссылки) не поддерживается — текст уйдёт обычным, ссылки будут дописаны в скобках.
         </p>
       </div>
 
@@ -204,6 +220,7 @@
           <tr class="text-left text-gray-500">
             <th class="pb-1">Время</th>
             <th class="pb-1">Кому</th>
+            <th class="pb-1">Куда</th>
             <th class="pb-1">Текст</th>
             <th class="pb-1">Статус</th>
             <th class="pb-1"></th>
