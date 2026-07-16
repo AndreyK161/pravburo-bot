@@ -9,7 +9,14 @@ from antispam import AntiSpamMiddleware
 from config import TAG_CONSULTATION_STARTED, TOKEN
 from database import save_user_field, set_tag_by_name_if_untagged, upsert_user
 from scenario_engine import SCENARIO, build_keyboard, gate_next_block, render_block
-from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_DATA, touch
+from state import (
+    AWAITING_INPUT,
+    LAST_BOT_MESSAGE,
+    LAST_PROCESSED_EVENT_ID,
+    LAST_PROCESSED_MESSAGE_ID,
+    USER_DATA,
+    touch,
+)
 from validators import VALIDATORS
 
 bot = Bot(token=TOKEN)
@@ -89,12 +96,30 @@ async def _handle_fallback_text(message: Message) -> None:
     LAST_BOT_MESSAGE[user_id] = {"peer_id": message.peer_id, "message_id": message_id}
 
 
+def _is_duplicate_message(message: Message) -> bool:
+    # VK Bots Long Poll изредка присылает одно и то же message_new повторно
+    # (особенность API, усугубляется обрывами polling-запроса) — без дедупа юзер
+    # получает один и тот же ответ бота дважды на одно своё сообщение.
+    user_id = message.from_id
+    seen_id = LAST_PROCESSED_MESSAGE_ID.get(user_id)
+    LAST_PROCESSED_MESSAGE_ID[user_id] = message.conversation_message_id
+    return seen_id is not None and seen_id == message.conversation_message_id
+
+
 @bot.on.message()
 async def message_new_handler(message: Message) -> None:
+    if _is_duplicate_message(message):
+        return
+
     async def dispatch(event: Message, data: dict) -> None:
         start_payload = _parse_start_payload(event.payload)
         if start_payload is not None:
             await _handle_start(event, start_payload)
+        elif (event.text or "").strip().lower() == "начать":
+            # Кнопка "Начать" в настройках сообщества шлёт payload {"command":"start"},
+            # но юзер может и просто написать "начать" руками (например, если кнопка
+            # не настроена или он открыл уже существующий диалог) — обрабатываем так же.
+            await _handle_start(event, {})
         else:
             await _handle_fallback_text(event)
 
@@ -106,6 +131,12 @@ async def message_new_handler(message: Message) -> None:
 @bot.on.raw_event(GroupEventType.MESSAGE_EVENT, dataclass=MessageEvent)
 async def message_event_handler(event: MessageEvent) -> None:
     obj = event.object
+
+    user_id = obj.user_id
+    seen_event_id = LAST_PROCESSED_EVENT_ID.get(user_id)
+    LAST_PROCESSED_EVENT_ID[user_id] = obj.event_id
+    if seen_event_id is not None and seen_event_id == obj.event_id:
+        return
 
     async def dispatch(evt, data: dict) -> None:
         user_id = evt.user_id

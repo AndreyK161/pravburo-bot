@@ -25,6 +25,8 @@ def reset_state():
     state.USER_DATA.clear()
     state.SPAM_EVENT_TIMES.clear()
     state.SPAM_MUTED_UNTIL.clear()
+    state.LAST_PROCESSED_MESSAGE_ID.clear()
+    state.LAST_PROCESSED_EVENT_ID.clear()
     yield
     state.USER_ACTIVITY.clear()
     state.LAST_BOT_MESSAGE.clear()
@@ -32,6 +34,8 @@ def reset_state():
     state.USER_DATA.clear()
     state.SPAM_EVENT_TIMES.clear()
     state.SPAM_MUTED_UNTIL.clear()
+    state.LAST_PROCESSED_MESSAGE_ID.clear()
+    state.LAST_PROCESSED_EVENT_ID.clear()
 
 
 @pytest.fixture

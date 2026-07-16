@@ -19,7 +19,7 @@ services:
       timeout: 5s
       retries: 10
 
-  bot:
+  tg_bot:
     build:
       context: .
       dockerfile: tg_bot/Dockerfile

@@ -3,14 +3,14 @@
   "blocks": {
     "check_subscription": {
       "type": "condition",
-      "channel": "@buro_test123123",
+      "channel": "@pravburo",
       "yes": "general_menu",
       "no": "ask_subscribe",
       "name": "Проверка подписки на канал"
     },
     "ask_subscribe": {
       "type": "message",
-      "text": "Для работы с ботом подпишитесь на наш Телеграм канал\n👇\nhttps://t.me/buro_test123123",
+      "text": "Для работы с ботом подпишитесь на наш Телеграм канал\n👇\nhttps://t.me/pravburo",
       "buttons": [
         {
           "text": "Проверить подписку",

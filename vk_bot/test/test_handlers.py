@@ -7,12 +7,16 @@ import scenario_engine
 import state
 
 
-def make_message(from_id=1, peer_id=1, text="привет", payload=None):
+_next_conversation_message_id = iter(range(1, 10_000))
+
+
+def make_message(from_id=1, peer_id=1, text="привет", payload=None, conversation_message_id=None):
     return SimpleNamespace(
         from_id=from_id,
         peer_id=peer_id,
         text=text,
         payload=json.dumps(payload) if payload is not None else None,
+        conversation_message_id=conversation_message_id or next(_next_conversation_message_id),
     )
 
 
@@ -62,6 +66,20 @@ async def test_message_new_handler_routes_start_payload_to_handle_start(vk_api, 
     assert args[1] == {"command": "start", "source": "vk_ads"}
 
 
+async def test_message_new_handler_routes_start_text_to_handle_start(vk_api, monkeypatch):
+    monkeypatch.setattr(handlers.bot, "api", vk_api)
+    handle_start = AsyncMock()
+    monkeypatch.setattr(handlers, "_handle_start", handle_start)
+
+    message = make_message(from_id=9, peer_id=9, text="Начать")
+    await handlers.message_new_handler(message)
+
+    handle_start.assert_awaited_once()
+    args = handle_start.call_args.args
+    assert args[0] is message
+    assert args[1] == {}
+
+
 async def test_message_new_handler_routes_plain_text_to_fallback(vk_api, monkeypatch):
     monkeypatch.setattr(handlers.bot, "api", vk_api)
     handle_fallback = AsyncMock()
@@ -71,6 +89,31 @@ async def test_message_new_handler_routes_plain_text_to_fallback(vk_api, monkeyp
     await handlers.message_new_handler(message)
 
     handle_fallback.assert_awaited_once_with(message)
+
+
+async def test_message_new_handler_ignores_duplicate_long_poll_delivery(vk_api, monkeypatch):
+    monkeypatch.setattr(handlers.bot, "api", vk_api)
+    handle_fallback = AsyncMock()
+    monkeypatch.setattr(handlers, "_handle_fallback_text", handle_fallback)
+
+    message = make_message(from_id=9, peer_id=9, text="aaa", conversation_message_id=42)
+    await handlers.message_new_handler(message)
+    await handlers.message_new_handler(message)  # VK Long Poll иногда шлёт апдейт повторно
+
+    handle_fallback.assert_awaited_once_with(message)
+
+
+async def test_message_new_handler_processes_distinct_messages_with_same_id_across_users(vk_api, monkeypatch):
+    monkeypatch.setattr(handlers.bot, "api", vk_api)
+    handle_fallback = AsyncMock()
+    monkeypatch.setattr(handlers, "_handle_fallback_text", handle_fallback)
+
+    message_a = make_message(from_id=10, peer_id=10, text="aaa", conversation_message_id=1)
+    message_b = make_message(from_id=11, peer_id=11, text="bbb", conversation_message_id=1)
+    await handlers.message_new_handler(message_a)
+    await handlers.message_new_handler(message_b)
+
+    assert handle_fallback.await_count == 2
 
 
 async def test_message_event_handler_delegates_to_render_block(vk_api, monkeypatch):

@@ -20,6 +20,13 @@ USER_DATA: dict[int, dict] = {}
 SPAM_EVENT_TIMES: dict[int, list[float]] = {}
 SPAM_MUTED_UNTIL: dict[int, float] = {}
 
+# VK Bots Long Poll изредка присылает одно и то же событие повторно (официальная
+# особенность API, усугубляется сетевыми обрывами — "Unable to make request to
+# BotPolling, retrying..." в логах). Храним id последнего обработанного сообщения/
+# события на пользователя, чтобы не отвечать на один и тот же апдейт дважды.
+LAST_PROCESSED_MESSAGE_ID: dict[int, int] = {}
+LAST_PROCESSED_EVENT_ID: dict[int, str] = {}
+
 
 def touch(user_id: int) -> int:
     USER_ACTIVITY[user_id] = USER_ACTIVITY.get(user_id, 0) + 1
