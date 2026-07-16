@@ -36,12 +36,24 @@ _VK_LINK_RE = re.compile(r'<a\s+href="([^"]*)"[^>]*>(.*?)</a>', re.IGNORECASE | 
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 
 
+def _vk_link_replacement(m: re.Match) -> str:
+    # VK Bot API не рендерит <a> и не делает текст ссылки кликабельным — в отличие
+    # от Telegram, где та же разметка остаётся <a href="...">слово</a> как есть.
+    # Поэтому для VK текст ссылки (слово, на которое кликали в редакторе) отбрасываем
+    # целиком и оставляем только голый URL — VK сам подсвечивает http(s)-ссылки
+    # в обычном тексте и делает их кликабельными без всякой разметки.
+    return f"{m.group(1)} "
+
+
 def html_to_vk_text(text: str) -> str:
     """Грубо переводит Telegram-HTML редактора рассылок в обычный текст для VK —
     VK Bot API messages.send не рендерит произвольную HTML-разметку."""
-    text = _VK_LINK_RE.sub(lambda m: f"{m.group(2)} ({m.group(1)})", text)
+    text = _VK_LINK_RE.sub(_vk_link_replacement, text)
     text = _HTML_TAG_RE.sub("", text)
-    return html.unescape(text)
+    text = html.unescape(text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    text = re.sub(r"[ \t]*\n[ \t]*", "\n", text)
+    return text.strip()
 
 # Рассылка на тысячи получателей идёт минутами — держать HTTP-запрос
 # открытым всё это время нельзя (упрётся в таймаут nginx/браузера).

@@ -136,7 +136,12 @@ function serializeNode(node) {
 
   if (node.tagName === "A") {
     const href = node.getAttribute("href");
-    return href && isSafeUrl(href) ? `<a href="${escapeForTelegram(href)}">${inner}</a>` : inner;
+    if (!href || !isSafeUrl(href)) return inner;
+    // Chrome иногда кладёт <br> (перенос строки) прямо внутрь <a>, если каретка
+    // стоит в конце ссылки при нажатии Enter — тогда "\n" становится частью
+    // текста ссылки. Выносим ведущие/замыкающие переносы за пределы тега.
+    const [, lead, core, trail] = inner.match(/^(\s*)([\s\S]*?)(\s*)$/);
+    return core ? `${lead}<a href="${escapeForTelegram(href)}">${core}</a>${trail}` : inner;
   }
 
   const tag = TAG_MAP[node.tagName];
