@@ -84,6 +84,6 @@ jobs:
             set -euo pipefail
             cd /home/botuser/pravburo-bot
             git pull
-            docker compose build bot vk_bot admin
+            docker compose build tg_bot vk_bot admin
             docker compose run --rm admin alembic upgrade head
-            docker compose up -d db bot vk_bot admin
+            docker compose up -d db tg_bot vk_bot admin
