@@ -3,3 +3,8 @@ __pycache__/
 .venv/
 admin_bot/backend/.env
 deploy/
+
+# Правится вручную/через админку прямо на проде — держать в git смысла нет,
+# только конфликтует с каждым pull.
+data/scenario.json
+data/scenario_graph_positions.json
