@@ -34,6 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare scenario.json (не в git — правится напрямую на проде)
+        run: cp data/scenario.example.json data/scenario.json
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

@@ -1,0 +1,174 @@
+{
+  "check_subscription": {
+    "x": 180.0,
+    "y": 346.0
+  },
+  "ask_subscribe": {
+    "x": -44.0,
+    "y": 593.0
+  },
+  "general_menu": {
+    "x": 120.0,
+    "y": -28.0
+  },
+  "consultation": {
+    "x": -31.0,
+    "y": -184.0
+  },
+  "consultation_question_name": {
+    "x": -178.0,
+    "y": -489.0
+  },
+  "consultation_question_region": {
+    "x": -489.0,
+    "y": -369.0
+  },
+  "consultation_menu": {
+    "x": -573.0,
+    "y": -46.0
+  },
+  "consultation_to_twenty-five": {
+    "x": -328.0,
+    "y": -296.0
+  },
+  "consultation_summary_to_twenty-five": {
+    "x": -235.0,
+    "y": 22.0
+  },
+  "consultation_menu_add": {
+    "x": -482.0,
+    "y": -24.0
+  },
+  "consultation_recommend_mfc_to_one-hundred-fifty": {
+    "x": -729.0,
+    "y": 225.0
+  },
+  "consultation_documents_to_one-hundred-fifty": {
+    "x": -503.0,
+    "y": 473.0
+  },
+  "consultation_to_one-hundred-fifty": {
+    "x": -393.0,
+    "y": 169.0
+  },
+  "consultation_attentively_to_twenty-five": {
+    "x": -81.0,
+    "y": 185.0
+  },
+  "consultation_offer_phone": {
+    "x": -175.0,
+    "y": 446.0
+  },
+  "consultation_add_phone": {
+    "x": -206.0,
+    "y": 134.0
+  },
+  "consultation_contact": {
+    "x": 64.0,
+    "y": 311.0
+  },
+  "consultation_to_three-hundred": {
+    "x": -466.0,
+    "y": 289.0
+  },
+  "stub_chat": {
+    "x": -49.0,
+    "y": 274.0
+  },
+  "stub_bailiffs": {
+    "x": 367.0,
+    "y": 192.0
+  },
+  "bailiffs_video": {
+    "x": 235.0,
+    "y": 514.0
+  },
+  "bailiffs_gosuslugi_video": {
+    "x": 560.0,
+    "y": 572.0
+  },
+  "bailiffs_regular_writting": {
+    "x": 514.0,
+    "y": 250.0
+  },
+  "stub_collectors": {
+    "x": 432.0,
+    "y": -138.0
+  },
+  "collectors_files": {
+    "x": 719.0,
+    "y": -1.0
+  },
+  "collectors_memo": {
+    "x": 669.0,
+    "y": 323.0
+  },
+  "collectors_threat": {
+    "x": 340.0,
+    "y": 321.0
+  },
+  "stub_mfc": {
+    "x": 322.0,
+    "y": -244.0
+  },
+  "mfc_files": {
+    "x": 653.0,
+    "y": -193.0
+  },
+  "stub_order": {
+    "x": 183.0,
+    "y": 242.0
+  },
+  "order_video": {
+    "x": -126.0,
+    "y": 64.0
+  },
+  "stub_sid": {
+    "x": -186.0,
+    "y": -181.0
+  },
+  "stub_children": {
+    "x": -118.0,
+    "y": -268.0
+  },
+  "stub_cancel": {
+    "x": 407.0,
+    "y": -249.0
+  },
+  "checklist_menu": {
+    "x": -182.0,
+    "y": -85.0
+  },
+  "topic_microloans": {
+    "x": 25.0,
+    "y": -349.0
+  },
+  "topic_finance_guide": {
+    "x": -59.0,
+    "y": -366.0
+  },
+  "topic_stop_work_for_banks": {
+    "x": 104.0,
+    "y": -328.0
+  },
+  "delay_five_minutes": {
+    "x": 35.0,
+    "y": -675.0
+  },
+  "followup_message_check_list": {
+    "x": 201.0,
+    "y": -399.0
+  },
+  "delay_twenty_minutes": {
+    "x": 501.0,
+    "y": -541.0
+  },
+  "followup_message_mfc": {
+    "x": 262.0,
+    "y": -324.0
+  },
+  "recommendation": {
+    "x": 360.0,
+    "y": -32.0
+  }
+}

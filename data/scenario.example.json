@@ -1,0 +1,505 @@
+{
+  "start": "check_subscription",
+  "blocks": {
+    "check_subscription": {
+      "type": "condition",
+      "channel": "@pravburo",
+      "yes": "general_menu",
+      "no": "ask_subscribe",
+      "name": "Проверка подписки на канал"
+    },
+    "ask_subscribe": {
+      "type": "message",
+      "text": "Для работы с ботом подпишитесь на наш Телеграм канал\n👇\nhttps://t.me/pravburo",
+      "buttons": [
+        {
+          "text": "Проверить подписку",
+          "next": "check_subscription"
+        }
+      ],
+      "name": "Просьба подписаться на канал"
+    },
+    "general_menu": {
+      "type": "message",
+      "text": "Выберите, что вас интересует:\n\n🔹 Нажмите ЧЕК-ЛИСТ, чтобы получить бесплатно памятки, гайды на разные случаи;\n\n🔹Нажмите КОНСУЛЬТАЦИЯ, если хотите получить подробный разбор Вашей ситуации бесплатно;\n\n🔹Нажмите ЧАТ, если хотите присоединиться к закрытому чату поддержки ;\n\n🔹Нажмите ПРИСТАВЫ, если взыскивают более 50%, не оставляют прожиточный минимум или производят незаконные взыскания;\n\n🔹Нажмите КОЛЛЕКТОРЫ, если они нарушают Ваши права - звонят близким, на работу, угрожают, приходят домой;\n\n🔹Нажмите МФЦ, если хотите получить документы для бесплатного списания долга;\n\n🔹Нажмите ПРИКАЗ, если хотите отменить судебный приказ;\n\n🔹Нажмите СИД, если хотите получить шаблон заявления об упущенном сроке давности кредитором;\n\n🔹Нажмите ДЕТСКИЕ, если приставы арестовали счет, на который поступают детские пособия;\n\n🔹Нажмите ОТМЕНА, если хотите отозвать согласие в банке на списания.",
+      "buttons": [
+        {
+          "text": "Консультация",
+          "next": "consultation"
+        },
+        {
+          "text": "Чат",
+          "next": "stub_chat"
+        },
+        {
+          "text": "Приставы",
+          "next": "stub_bailiffs"
+        },
+        {
+          "text": "Коллекторы",
+          "next": "stub_collectors"
+        },
+        {
+          "text": "МФЦ",
+          "next": "stub_mfc"
+        },
+        {
+          "text": "Приказ",
+          "next": "stub_order"
+        },
+        {
+          "text": "СИД",
+          "next": "stub_sid"
+        },
+        {
+          "text": "Детские",
+          "next": "stub_children"
+        },
+        {
+          "text": "Отмена",
+          "next": "stub_cancel"
+        },
+        {
+          "text": "Чек-листы",
+          "next": "checklist_menu"
+        }
+      ],
+      "name": "Главное меню"
+    },
+    "consultation": {
+      "type": "document",
+      "text": "Для того, чтобы получить бесплатную консультацию, ответьте на несколько вопросов☺️",
+      "file": "konsult.jpeg",
+      "auto_next": "consultation_question_name",
+      "name": "Консультация — старт"
+    },
+    "consultation_question_name": {
+      "type": "input",
+      "text": "Как вас зовут?",
+      "save_as": "name",
+      "next": "consultation_question_region",
+      "name": "Консультация — вопрос: имя"
+    },
+    "consultation_question_region": {
+      "type": "input",
+      "text": "В каком регионе вы проживаете?",
+      "save_as": "region",
+      "next": "consultation_menu",
+      "name": "Консультация — вопрос: регион"
+    },
+    "consultation_menu": {
+      "type": "message",
+      "text": "Какая у вас общая сумма долга?",
+      "buttons": [
+        {
+          "text": "до 25 тыс.р",
+          "next": "consultation_to_twenty-five"
+        },
+        {
+          "text": "25-150 тыс.р",
+          "next": "consultation_recommend_mfc_to_one-hundred-fifty"
+        },
+        {
+          "text": "150-300 тыс.р",
+          "next": "consultation_to_three-hundred"
+        },
+        {
+          "text": "более 300 тыс.р",
+          "next": "consultation_to_three-hundred"
+        }
+      ],
+      "name": "Консультация — сумма долга"
+    },
+    "consultation_to_twenty-five": {
+      "type": "message",
+      "text": "Это общая сумма всех долгов? Или может есть кредиты, которые платите? Долг по ЖКХ, налогам, штрафам?",
+      "buttons": [
+        {
+          "text": "Общая сумма",
+          "next": "consultation_summary_to_twenty-five"
+        },
+        {
+          "text": "Есть еще",
+          "next": "consultation_menu_add"
+        }
+      ],
+      "name": "Долг до 25 тыс — уточнение состава долга"
+    },
+    "consultation_summary_to_twenty-five": {
+      "type": "document",
+      "text": "Такой долг лучше гасить самостоятельно. Для банкротства в МФЦ сумма долга должна быть от 25 000р. А в Арбитражном суде Вам будет невыгодно списывать этот долг, так как судебных расходов выйдет намного больше, чем сумма Вашего долга.",
+      "file": "nevigoda.jpeg",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Долг до 25 тыс — итог (банкротство невыгодно)"
+    },
+    "consultation_menu_add": {
+      "type": "message",
+      "text": "Какая у вас общая сумма долга?",
+      "buttons": [
+        {
+          "text": "25-150 тыс.р",
+          "next": "consultation_recommend_mfc_to_one-hundred-fifty"
+        },
+        {
+          "text": "150-300 тыс.р",
+          "next": "consultation_to_three-hundred"
+        },
+        {
+          "text": "более 300 тыс.р",
+          "next": "consultation_to_three-hundred"
+        }
+      ],
+      "name": "Уточнение суммы долга (повторный вопрос)"
+    },
+    "consultation_recommend_mfc_to_one-hundred-fifty": {
+      "type": "message",
+      "text": "Списание долга в Арбитражном суде Вам будет невыгодно, но возможно, Вам подойдет бесплатное банкротство через МФЦ. \n\nПосмотрите видео от нашего руководителя, в котором он подробно рассказывает в каких случаях оно подходит⬇️\n\nhttps://rutube.ru/video/ad04a087d13ba19869bae8ded4eaaba1/?r=wd",
+      "auto_next": "consultation_documents_to_one-hundred-fifty",
+      "name": "Рекомендация МФЦ (долг 25–150 тыс)"
+    },
+    "consultation_documents_to_one-hundred-fifty": {
+      "type": "document",
+      "text": "Необходимые документы для подачи банкротства в МФЦ",
+      "file": [
+        "Uvedomlenie_o_susestvennom_izmenenii_imusestvennogo_polozenia.pdf",
+        "Spisok_kreditorov.pdf",
+        "Forma_zaavlenia.pdf"
+      ],
+      "auto_next": "consultation_to_one-hundred-fifty",
+      "name": "Документы для МФЦ (долг 25–150 тыс)"
+    },
+    "consultation_to_one-hundred-fifty": {
+      "type": "message",
+      "text": "Это общая сумма всех долгов? Или может есть кредиты, которые платите? Долг по ЖКХ, налогам, штрафам?",
+      "buttons": [
+        {
+          "text": "Общая сумма",
+          "next": "consultation_attentively_to_twenty-five"
+        },
+        {
+          "text": "Есть еще",
+          "next": "consultation_offer_phone"
+        }
+      ],
+      "name": "Долг 25–150 тыс — уточнение состава долга"
+    },
+    "consultation_attentively_to_twenty-five": {
+      "type": "message",
+      "text": "посмотрите внимательно видео, отправленное ранее, возможно Вам подойдет списание долга в МФЦ",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Совет пересмотреть видео про МФЦ"
+    },
+    "consultation_offer_phone": {
+      "type": "message",
+      "text": "Давайте Вам позвонит наш специалист, подробно расскажет, какие варианты решения вопроса с долгом есть в Вашем случае. Это бесплатно✔️",
+      "auto_next": "consultation_add_phone",
+      "name": "Предложение звонка от специалиста"
+    },
+    "consultation_add_phone": {
+      "type": "input",
+      "text": "Введите свой контактный номер телефона в сообщении☺️\n\nЕсли хотите вернуться назад, нажмите «меню»",
+      "save_as": "phone",
+      "validate": "phone",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "next": "consultation_contact",
+      "name": "Ввод номера телефона"
+    },
+    "consultation_contact": {
+      "type": "message",
+      "text": "С Вами свяжется специалист компании \"Правбюро\" в ближайшее время с 10:00 до 19:00 по Московскому времени ☺️",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Подтверждение: свяжется специалист"
+    },
+    "consultation_to_three-hundred": {
+      "type": "document",
+      "text": "Есть ли у Вас залоговое имущество?",
+      "file": "reshenie_est.jpeg",
+      "buttons": [
+        {
+          "text": "Да",
+          "next": "consultation_offer_phone",
+          "set_field": "has_property",
+          "set_value": "yes"
+        },
+        {
+          "text": "Нет",
+          "next": "consultation_offer_phone",
+          "set_field": "has_property",
+          "set_value": "no"
+        }
+      ],
+      "name": "Долг от 300 тыс — есть ли залоговое имущество"
+    },
+    "stub_chat": {
+      "type": "document",
+      "text": "Присоединяйтесь к закрытому чату, в котором состоят люди на разной стадии процедуры банкротства: \n\n🔹 Сейчас проходят её\n🔹 Уже списали свои долги\n🔹 Только подумывают о прохождении процедуры\n\nА также в этом чате есть юристы, которые помогут найти ответы на ваши вопросы☺️\nhttps://t.me/+MB-25TrWGJpiMGEy",
+      "file": "chat.jpeg",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Чат поддержки"
+    },
+    "stub_bailiffs": {
+      "type": "document",
+      "text": "Направьте это заявление приставу, если взыскивают с зарплаты/пенсии, не оставляя прожиточный минимум ⬇️",
+      "file": "Zaavlenie_pristavu.pdf",
+      "auto_next": "bailiffs_video",
+      "name": "Приставы — заявление о минимуме дохода"
+    },
+    "bailiffs_video": {
+      "type": "message",
+      "text": "Сколько имеют право списывать приставы и в каких случаях необходимо направлять это заявление? Смотрите в видео⬇️\n\nhttps://rutube.ru/video/b3a7625487c72fe92e628cfff94b8dc0/?r=wd",
+      "auto_next": "bailiffs_gosuslugi_video",
+      "name": "Приставы — видео о лимитах взыскания"
+    },
+    "bailiffs_gosuslugi_video": {
+      "type": "message",
+      "text": "Также Вы можете подать жалобу через госуслуги. В этом видео руководитель нашей компании подробно рассказывает, как это сделать ⬇️\n\nhttps://rutube.ru/video/36508f8b010182a66dc664baf3850bfe/",
+      "auto_next": "bailiffs_regular_writting",
+      "name": "Приставы — видео про жалобу через Госуслуги"
+    },
+    "bailiffs_regular_writting": {
+      "type": "document",
+      "text": "Если пристав совершает регулярно неправомерные взыскания, либо не реагирует на жалобы, необходимо писать заявление старшему приставу ⬇️",
+      "file": "Zaloba_na_kollektorov_v_policiu_docx.pdf",
+      "auto_next": "recommendation",
+      "name": "Приставы — заявление старшему приставу"
+    },
+    "stub_collectors": {
+      "type": "message",
+      "text": "В этом видео Вы узнаете, как коллекторы нарушают Ваши права и что делать в таком случае ⬇️\n\nhttps://youtu.be/Q21P-Rl5C5c",
+      "auto_next": "collectors_files",
+      "name": "Коллекторы — видео о правах должника"
+    },
+    "collectors_files": {
+      "type": "document",
+      "text": "Форма заявления на отказ от взаимодействия с кредиторами, о которой Станислав Валерьевич говорит в видео ⬇️",
+      "file": "Otkaz_ot_vzaimodejstvia_s_kollektorami.pdf",
+      "auto_next": "collectors_memo",
+      "name": "Коллекторы — заявление об отказе взаимодействия"
+    },
+    "collectors_memo": {
+      "type": "document",
+      "text": "А вот для Вас памятка о том, на что имеют право коллекторы, а что запрещено по закону. Помните о своих правах! ☺️",
+      "file": "collectors_memo_photo.jpeg",
+      "auto_next": "collectors_threat",
+      "name": "Коллекторы — памятка о правах"
+    },
+    "collectors_threat": {
+      "type": "document",
+      "text": "Если коллекторы угрожают Вам, нарушают Ваши права - пишите данное заявление в полицию",
+      "file": "Zaloba_na_kollektorov_v_policiu_docx.pdf",
+      "auto_next": "recommendation",
+      "name": "Коллекторы — заявление в полицию при угрозах"
+    },
+    "stub_mfc": {
+      "type": "message",
+      "text": "В этом Видео наш руководитель Станислав Свириденко, рассказывает об условиях для подачи на бесплатное банкротство в МФЦ. А также наглядно разбирает заполнение документов ⬇️\n\nhttps://rutube.ru/video/6c731d43261f052abd8a292b728cb7ee/",
+      "auto_next": "mfc_files",
+      "name": "МФЦ — видео об условиях банкротства"
+    },
+    "mfc_files": {
+      "type": "document",
+      "text": "Необходимые файлы для подачи на бесплатное банкротство через МФЦ ⬇️",
+      "file": [
+        "Uvedomlenie_o_susestvennom_izmenenii_imusestvennogo_polozenia.pdf",
+        "Spisok_kreditorov.pdf",
+        "Forma_zaavlenia.pdf"
+      ],
+      "auto_next": "delay_twenty_minutes",
+      "name": "МФЦ — необходимые документы"
+    },
+    "stub_order": {
+      "type": "document",
+      "text": "Направьте это заявление в суд для отмены судебного приказа. Главное помните, что это временное решение ⬇️",
+      "file": "otmena_prikaza.pdf",
+      "auto_next": "order_video",
+      "name": "Судебный приказ — заявление на отмену"
+    },
+    "order_video": {
+      "type": "message",
+      "text": "А в этом видео наш руководитель Станислав Валерьевич рассказывает подробнее об отмене судебного приказа⬇️\n\nhttps://youtu.be/vcsK8lPJMgI?si=GUl5ekNeLgQjB4qh",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Судебный приказ — видео об отмене"
+    },
+    "stub_sid": {
+      "type": "document",
+      "text": "Когда можно применить списание долга по сроку исковой давности и как это сделать, рассказывает в видео руководитель нашей компании Станислав Свириденко ⬇️\n\nhttps://youtu.be/aqDYxudfDn0?si=tEALlIj-zqtVuSHb\n\n",
+      "file": "SID.pdf",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "СИД — списание по сроку исковой давности"
+    },
+    "stub_children": {
+      "type": "document",
+      "text": "Направьте это заявление судебному приставу в случае, если взыскали детские пособия или наложили арест на счёт, на который они поступают ⬇️\n\n",
+      "file": "Snatie_aresta_so_sceta_s_detskimi_posobiami_docx.pdf",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Детские пособия — заявление приставу о снятии ареста"
+    },
+    "stub_cancel": {
+      "type": "document",
+      "text": "Если у Вас карточка в том же банке, что и кредит, банк без уведомления может списать деньги с любого счета открытого в нем. Чаще всего Вы сами соглашаетесь на это, подписывая договор. Но это можно отменить, написав данное заявление в банк ⬇️\n\n",
+      "file": "Otzyv_soglasia_v_banke.pdf",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Отзыв согласия в банке — заявление"
+    },
+    "checklist_menu": {
+      "type": "message",
+      "text": "Здесь мы собрали бесплатные чек-листы и гайды, которые помогают разобраться в финансовых и юридических вопросах простым языком.\n\nВыберите тему ниже — бот сразу пришлёт нужный материал👇",
+      "buttons": [
+        {
+          "text": "Микрозаймы",
+          "next": "topic_microloans"
+        },
+        {
+          "text": "Гайд по финансам",
+          "next": "topic_finance_guide"
+        },
+        {
+          "text": "Как перестать работать на банки",
+          "next": "topic_stop_work_for_banks"
+        }
+      ],
+      "name": "Меню чек-листов и гайдов"
+    },
+    "topic_microloans": {
+      "type": "document",
+      "file": "Zasita_ot_mikrozajmov.pdf",
+      "text": "Мы подготовили этот чек-лист, чтобы вы не повторяли ошибки тысяч людей по всей стране.\n\nМикрозаймы — это чаще всего не помощь, а бизнес, построенный на спешке, страхе и незнании законов.\n\nВ этом чек-листе вы узнаете:\n— какие уловки используют МФО\n— как выявить незаконные проценты и комиссии\n— что делать, если микрозайм уже оформлен и платить тяжело\n\nНиже вы можете скачать файл👇",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "auto_next": "delay_five_minutes",
+      "name": "Чек-лист: защита от микрозаймов"
+    },
+    "topic_finance_guide": {
+      "type": "document",
+      "file": "Gajd_po_finansam.pdf",
+      "text": "Этот гайд — для тех, кто хочет навести порядок в деньгах без сложных схем.\nПосле прочтения и выполнения 6 простых шагов вы:\n— поймёте, куда уходят деньги\n— начнёте управлять доходами и расходами\n— снизите финансовый стресс и хаос\n\nЗабирайте гайд ниже 👇",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "auto_next": "delay_five_minutes",
+      "name": "Гайд по финансам"
+    },
+    "topic_stop_work_for_banks": {
+      "type": "document",
+      "file": "gaid.pdf",
+      "text": "Гайд по теме «Как перестать работать на банки». Забирайте материал ниже 👇",
+      "buttons": [
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "auto_next": "delay_five_minutes",
+      "name": "Гайд: как перестать работать на банки"
+    },
+    "delay_five_minutes": {
+      "type": "delay",
+      "seconds": 300,
+      "next": "followup_message_check_list",
+      "name": "Задержка 5 минут (после чек-листа)"
+    },
+    "followup_message_check_list": {
+      "type": "message",
+      "text": "Если чувствуете, что проблема с долгами уже не «мелкая» — не оставайтесь с ней один на один.\nЧаще всего люди жалеют только об одном — что слишком долго тянули с решением.\n\nОбращайтесь и мы разберём вашу ситуацию👇",
+      "buttons": [
+        {
+          "text": "Консультация",
+          "next": "consultation"
+        },
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Догоняющее сообщение после чек-листа"
+    },
+    "delay_twenty_minutes": {
+      "type": "delay",
+      "seconds": 1200,
+      "next": "followup_message_mfc",
+      "name": "Задержка 20 минут (после видео МФЦ)"
+    },
+    "followup_message_mfc": {
+      "type": "message",
+      "text": "Если после просмотра видео Вы всё еще сомневаетесь подходит ли Вам списание долгов в МФЦ или точно убедились, что не подходит и хотите узнать о списании долга в суде, записывайтесь на бесплатную консультацию ✔️",
+      "buttons": [
+        {
+          "text": "Консультация",
+          "next": "consultation"
+        },
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Догоняющее сообщение после МФЦ"
+    },
+    "recommendation": {
+      "type": "message",
+      "text": "А если хотите узнать, можно ли Вам списать долги по закону, записывайтесь на бесплатную консультацию",
+      "buttons": [
+        {
+          "text": "Консультация",
+          "next": "consultation"
+        },
+        {
+          "text": "В меню",
+          "next": "general_menu"
+        }
+      ],
+      "name": "Рекомендация записаться на консультацию"
+    }
+  }
+}
