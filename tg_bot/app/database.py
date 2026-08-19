@@ -9,8 +9,10 @@ DB_POOL: asyncpg.Pool | None = None
 async def init_db_pool() -> None:
     # Схема БД (tg_users, tags, ...) управляется alembic-миграциями из admin_bot/backend,
     # бот только открывает пул и ожидает, что таблицы уже созданы.
+    # command_timeout — защита от зависшего запроса при обрыве WireGuard-туннеля
+    # до БД (см. deploy/SPLIT_DEPLOYMENT.md): без него запрос виснет навсегда.
     global DB_POOL
-    DB_POOL = await asyncpg.create_pool(DATABASE_URL)
+    DB_POOL = await asyncpg.create_pool(DATABASE_URL, command_timeout=10)
 
 
 async def close_db_pool() -> None:

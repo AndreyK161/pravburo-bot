@@ -2,7 +2,7 @@ const originalFetch = window.fetch;
 window.fetch = async (...args) => {
   const res = await originalFetch(...args);
   if (res.status === 401 && !args[0].toString().includes("/api/auth/")) {
-    window.location.href = "/login";
+    window.location.href = "/login?expired=1";
   }
   return res;
 };
@@ -18,7 +18,7 @@ export async function requireLogin() {
     currentRole = data.role;
     return true;
   } catch {
-    window.location.href = "/login";
+    window.location.href = "/login?expired=1";
     return false;
   }
 }

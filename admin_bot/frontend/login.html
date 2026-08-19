@@ -30,6 +30,10 @@
   const form = document.getElementById("loginForm");
   const errorEl = document.getElementById("loginError");
 
+  if (new URLSearchParams(window.location.search).has("expired")) {
+    errorEl.textContent = "Сессия истекла, войдите заново";
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorEl.textContent = "";
