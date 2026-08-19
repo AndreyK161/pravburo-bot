@@ -18,7 +18,7 @@ from config import (
     TAG_CONSULTATION_STARTED,
 )
 from database import set_blocked, set_tag_by_name, update_current_stage
-from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_ACTIVITY
+from state import AWAITING_INPUT, LAST_BOT_MESSAGE, PENDING_DEEPLINK, USER_ACTIVITY
 
 with open(SCENARIO_PATH, "r", encoding="utf-8") as f:
     SCENARIO = json.load(f)
@@ -112,7 +112,13 @@ async def _render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, rep
 
     if block["type"] == "condition":
         subscribed = await is_subscribed(bot, block["channel"], user_id)
-        next_block_id = block["yes"] if subscribed else block["no"]
+        if subscribed:
+            # Если юзер пришёл по диплинку на конкретный раздел, но не был
+            # подписан — после подтверждения подписки ведём его туда, а не
+            # в general_menu по умолчанию.
+            next_block_id = PENDING_DEEPLINK.pop(user_id, None) or block["yes"]
+        else:
+            next_block_id = block["no"]
         await render_block(bot, chat_id, user_id, next_block_id, replace=replace)
         return
 

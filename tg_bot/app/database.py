@@ -18,15 +18,22 @@ async def close_db_pool() -> None:
         await DB_POOL.close()
 
 
-async def upsert_user(user_id: int, chat_id: int, username: str | None, source: str | None = None) -> None:
-    # source не трогаем при повторных заходах — фиксируем метку только с первого /start.
+async def upsert_user(
+    user_id: int,
+    chat_id: int,
+    username: str | None,
+    source: str | None = None,
+    utm_source: str | None = None,
+    utm_campaign: str | None = None,
+) -> None:
+    # source/utm_* не трогаем при повторных заходах — фиксируем метку только с первого /start.
     async with DB_POOL.acquire() as conn:
         await conn.execute("""
-            INSERT INTO tg_users (user_id, chat_id, username, source)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO tg_users (user_id, chat_id, username, source, utm_source, utm_campaign)
+            VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (user_id) DO UPDATE
             SET chat_id = $2, username = $3, updated_at = now()
-        """, user_id, chat_id, username, source)
+        """, user_id, chat_id, username, source, utm_source, utm_campaign)
 
 
 async def save_user_field(user_id: int, field: str, value: str) -> None:

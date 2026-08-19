@@ -11,7 +11,10 @@ async def get_sources_stats():
         rows = await conn.fetch("""
             SELECT COALESCE(source, 'unknown') AS source, COUNT(*) AS users_count
             FROM (
-                SELECT source FROM tg_users
+                -- utm_source разобран из ссылок вида start=<блок>_<источник>_<крео>
+                -- (см. tg_bot/app/handlers.py) — если его нет (старые ссылки без
+                -- разметки, например "YDX-DIRECT"), группируем по сырому source как раньше.
+                SELECT COALESCE(utm_source, source) AS source FROM tg_users
                 UNION ALL
                 SELECT source FROM vk_users
             ) u

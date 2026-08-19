@@ -7,10 +7,42 @@ from antispam import AntiSpamMiddleware
 from config import TAG_CONSULTATION_STARTED
 from database import save_user_field, set_tag_by_name_if_untagged, upsert_user
 from scenario_engine import SCENARIO, gate_next_block, render_block
-from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_DATA, touch
+from state import AWAITING_INPUT, LAST_BOT_MESSAGE, PENDING_DEEPLINK, USER_DATA, touch
 from validators import VALIDATORS
 
 dp = Dispatcher()
+
+# Диплинки вида t.me/<bot>?start=<блок>_<источник>_<крео>, например
+# "kollektory_vk_1" или "mfc_ydxdirect_3" — открывают сразу нужный раздел
+# сценария и одновременно размечают источник/креатив для статистики.
+# Первая часть должна быть одним из ключей ниже; если это не так (например,
+# старые ссылки вида "YDX-DIRECT" без разметки) — строка не парсится и
+# целиком идёт в source как раньше, без block/utm_source/utm_campaign.
+DEEPLINK_BLOCKS = {
+    "consultation": "consultation",
+    "chat": "stub_chat",
+    "pristavi": "stub_bailiffs",
+    "kollektory": "stub_collectors",
+    "mfc": "stub_mfc",
+    "prikaz": "stub_order",
+    "sid": "stub_sid",
+    "detskie": "stub_children",
+    "otmena": "stub_cancel",
+    "checklist": "checklist_menu",
+}
+
+
+def parse_deeplink(args: str | None) -> tuple[str | None, str | None, str | None]:
+    """Возвращает (block_id, utm_source, utm_campaign) из command.args."""
+    if not args:
+        return None, None, None
+    parts = args.split("_")
+    block_id = DEEPLINK_BLOCKS.get(parts[0])
+    if block_id is None:
+        return None, None, None
+    utm_source = parts[1] if len(parts) > 1 and parts[1] else None
+    utm_campaign = parts[2] if len(parts) > 2 and parts[2] else None
+    return block_id, utm_source, utm_campaign
 
 
 async def safe_answer(callback: CallbackQuery) -> None:
@@ -36,10 +68,25 @@ async def command_start_handler(message: Message, bot: Bot, command: CommandObje
     touch(message.from_user.id)
     AWAITING_INPUT.pop(message.from_user.id, None)
     # command.args — это то, что стоит после /start (метка из ссылки вида
-    # t.me/tg_bot?start=YDX-DIRECT). При повторных заходах не перезаписывается.
-    await upsert_user(message.from_user.id, message.chat.id, message.from_user.username, command.args)
+    # t.me/tg_bot?start=kollektory_vk_1). При повторных заходах не перезаписывается.
+    target_block_id, utm_source, utm_campaign = parse_deeplink(command.args)
+    await upsert_user(
+        message.from_user.id, message.chat.id, message.from_user.username,
+        command.args, utm_source, utm_campaign,
+    )
     await set_tag_by_name_if_untagged(message.from_user.id, TAG_CONSULTATION_STARTED)
-    await render_block(bot, message.chat.id, message.from_user.id, SCENARIO["start"], replace=False)
+
+    PENDING_DEEPLINK.pop(message.from_user.id, None)
+    if target_block_id:
+        start_block_id = await gate_next_block(bot, message.from_user.id, target_block_id)
+        if start_block_id != target_block_id:
+            # Не подписан — сначала проверка подписки, целевой блок откроется
+            # после неё (см. PENDING_DEEPLINK в scenario_engine).
+            PENDING_DEEPLINK[message.from_user.id] = target_block_id
+    else:
+        start_block_id = SCENARIO["start"]
+
+    await render_block(bot, message.chat.id, message.from_user.id, start_block_id, replace=False)
 
 
 # Callback handler для кнопок сценария (block:<next_block_id>)
