@@ -1,24 +1,4 @@
 services:
-  db:
-    image: postgres:16-alpine
-    container_name: postgres_db
-    restart: always
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-bot_pravburo}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # Optional: Auto-run SQL scripts on startup
-      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   tg_bot:
     build:
       context: .
@@ -28,14 +8,11 @@ services:
     env_file:
       - tg_bot/.env
     environment:
-      # Внутри docker-сети база доступна по имени сервиса, а не localhost.
-      # Значения POSTGRES_* берутся из корневого .env (не в git).
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-bot_pravburo}
+      # DB_HOST — WireGuard-адрес сервера БД (РФ), см. deploy/SPLIT_DEPLOYMENT.md.
+      # Значения POSTGRES_*/DB_HOST берутся из корневого .env (не в git).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST}:${DB_PORT:-5432}/${POSTGRES_DB:-bot_pravburo}
     volumes:
       - ./data:/app/data
-    depends_on:
-      db:
-        condition: service_healthy
 
   vk_bot:
     build:
@@ -46,12 +23,9 @@ services:
     env_file:
       - vk_bot/.env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-bot_pravburo}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST}:${DB_PORT:-5432}/${POSTGRES_DB:-bot_pravburo}
     volumes:
       - ./data:/app/data
-    depends_on:
-      db:
-        condition: service_healthy
 
   admin:
     build:
@@ -62,14 +36,8 @@ services:
     env_file:
       - admin_bot/backend/.env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-bot_pravburo}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST}:${DB_PORT:-5432}/${POSTGRES_DB:-bot_pravburo}
     volumes:
       - ./data:/app/data
     ports:
       - "127.0.0.1:8123:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-
-volumes:
-  postgres_data:
