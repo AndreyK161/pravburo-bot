@@ -9,6 +9,7 @@ from vkbottle.tools import DocMessagesUploader, PhotoMessageUploader
 
 from config import (
     AUTO_NEXT_DELAY_SECONDS,
+    CONSENT_BLOCK,
     CONSULTATION_DONE_BLOCK,
     CONSULTATION_START_BLOCK,
     FILES_DIR,
@@ -58,6 +59,10 @@ def build_keyboard(buttons: list[dict]) -> str | None:
     def button_payload(btn: dict) -> dict:
         # Кнопка может не просто вести в следующий блок, но и запомнить выбор
         # юзера (set_field/set_value) — например "Да/Нет" на вопрос про имущество.
+        # consent — кнопка согласия в CONSENT_BLOCK, у неё нет фиксированного
+        # "next" в JSON, следующий блок решает message_event_handler.
+        if btn.get("consent"):
+            return {"consent": True}
         if "set_field" in btn:
             return {"field": btn["set_field"], "value": btn["set_value"], "block": btn["next"]}
         return {"block": btn["next"]}
@@ -172,7 +177,10 @@ async def _render_block(vk_api: API, peer_id: int, user_id: int, block_id: str, 
 
     if block["type"] == "condition":
         subscribed = await is_subscribed(vk_api, block, user_id)
-        next_block_id = block["yes"] if subscribed else block["no"]
+        # CONSENT_BLOCK — экран согласия на обработку перс. данных, показывается
+        # каждый раз перед general_menu (не запоминаем, согласился юзер или нет —
+        # это просто обязательный показ, не учёт).
+        next_block_id = CONSENT_BLOCK if subscribed else block["no"]
         await render_block(vk_api, peer_id, user_id, next_block_id, replace=replace)
         return
 

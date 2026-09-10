@@ -8,6 +8,7 @@ from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarku
 
 from config import (
     AUTO_NEXT_DELAY_SECONDS,
+    CONSENT_BLOCK,
     CONSULTATION_DONE_BLOCK,
     CONSULTATION_START_BLOCK,
     FILES_DIR,
@@ -19,7 +20,7 @@ from config import (
 )
 from database import set_blocked, set_tag_by_name, update_current_stage
 from notify import notify_consultation_lead
-from state import AWAITING_INPUT, LAST_BOT_MESSAGE, PENDING_DEEPLINK, USER_ACTIVITY
+from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_ACTIVITY
 
 with open(SCENARIO_PATH, "r", encoding="utf-8") as f:
     SCENARIO = json.load(f)
@@ -32,6 +33,11 @@ def build_keyboard(buttons: list[dict]) -> InlineKeyboardMarkup | None:
     def callback_data(btn: dict) -> str:
         # Кнопка может не просто вести в следующий блок, но и запомнить выбор
         # юзера (set_field/set_value) — например "Да/Нет" на вопрос про имущество.
+        # consent — кнопка согласия в CONSENT_BLOCK, у неё нет фиксированного
+        # "next" в JSON: следующий блок решает consent_accept_handler (учитывает
+        # PENDING_DEEPLINK), чтобы диплинк не терялся на этом экране.
+        if btn.get("consent"):
+            return "consent:accept"
         if "set_field" in btn:
             return f"field:{btn['set_field']}={btn['set_value']}:{btn['next']}"
         return f"block:{btn['next']}"
@@ -113,13 +119,10 @@ async def _render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, rep
 
     if block["type"] == "condition":
         subscribed = await is_subscribed(bot, block["channel"], user_id)
-        if subscribed:
-            # Если юзер пришёл по диплинку на конкретный раздел, но не был
-            # подписан — после подтверждения подписки ведём его туда, а не
-            # в general_menu по умолчанию.
-            next_block_id = PENDING_DEEPLINK.pop(user_id, None) or block["yes"]
-        else:
-            next_block_id = block["no"]
+        # CONSENT_BLOCK — экран согласия на обработку перс. данных, показывается
+        # каждый раз перед general_menu/целью диплинка (нигде не запоминаем,
+        # согласился юзер или нет — это просто обязательный показ, не учёт).
+        next_block_id = CONSENT_BLOCK if subscribed else block["no"]
         await render_block(bot, chat_id, user_id, next_block_id, replace=replace)
         return
 

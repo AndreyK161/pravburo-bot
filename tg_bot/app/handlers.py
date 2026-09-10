@@ -100,6 +100,19 @@ async def command_start_handler(message: Message, bot: Bot, command: CommandObje
     await render_block(bot, message.chat.id, message.from_user.id, start_block_id, replace=False)
 
 
+# Кнопка "Даю согласие" в CONSENT_BLOCK — не хранит факт согласия в БД, это
+# просто обязательный показ экрана. Ведёт в general_menu, либо, если юзер шёл
+# по диплинку на конкретный раздел, туда (см. PENDING_DEEPLINK).
+@dp.callback_query(F.data == "consent:accept")
+async def consent_accept_handler(callback: CallbackQuery, bot: Bot) -> None:
+    touch(callback.from_user.id)
+    AWAITING_INPUT.pop(callback.from_user.id, None)
+    start_block = SCENARIO["blocks"][SCENARIO["start"]]
+    next_block_id = PENDING_DEEPLINK.pop(callback.from_user.id, None) or start_block["yes"]
+    await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
+    await safe_answer(callback)
+
+
 # Callback handler для кнопок сценария (block:<next_block_id>)
 @dp.callback_query(F.data.startswith("block:"))
 async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:

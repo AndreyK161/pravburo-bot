@@ -144,14 +144,20 @@ async def message_event_handler(event: MessageEvent) -> None:
         AWAITING_INPUT.pop(user_id, None)
 
         payload = evt.payload or {}
-        next_block_id = payload.get("block")
 
-        if next_block_id is not None:
-            if "field" in payload:
-                await save_user_field(user_id, payload["field"], payload["value"])
+        if payload.get("consent"):
+            # Кнопка "Даю согласие" в CONSENT_BLOCK — не хранит факт согласия
+            # в БД, это просто обязательный показ экрана. Ведёт в general_menu.
+            start_block = SCENARIO["blocks"][SCENARIO["start"]]
+            await render_block(bot.api, evt.peer_id, user_id, start_block["yes"])
+        else:
+            next_block_id = payload.get("block")
+            if next_block_id is not None:
+                if "field" in payload:
+                    await save_user_field(user_id, payload["field"], payload["value"])
 
-            next_block_id = await gate_next_block(bot.api, user_id, next_block_id)
-            await render_block(bot.api, evt.peer_id, user_id, next_block_id)
+                next_block_id = await gate_next_block(bot.api, user_id, next_block_id)
+                await render_block(bot.api, evt.peer_id, user_id, next_block_id)
 
         # Аналог callback.answer() в tg_bot — снимает "часики" с кнопки.
         # Отвечаем в любом случае, даже если payload оказался без "block".

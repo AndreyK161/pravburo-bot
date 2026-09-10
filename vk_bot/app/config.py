@@ -37,6 +37,11 @@ CONSULTATION_DONE_BLOCK = "consultation_contact"
 TAG_CONSULTATION_STARTED = "Консультация: нет"
 TAG_CONSULTATION_DONE = "Консультация: да"
 
+# Блок согласия на обработку перс. данных — показывается один раз (после
+# проверки подписки, до general_menu), пока юзер не нажмёт кнопку "Даю
+# согласие" в нём (см. consent_given_at в БД).
+CONSENT_BLOCK = "consent"
+
 # Уведомление о новой заявке (CONSULTATION_DONE_BLOCK) шлём через Telegram-бота
 # @pravburohelpBot (у vk_bot нет своего Telegram-присутствия) — тот же токен и
 # те же id чатов, что настроены в tg_bot/.env (NOTIFY_CHAT_IDS).
