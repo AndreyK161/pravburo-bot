@@ -1,7 +1,7 @@
 from aiogram import Bot, Dispatcher, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, ChatMemberUpdated, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from antispam import AntiSpamMiddleware
 from config import TAG_CONSULTATION_STARTED
@@ -60,6 +60,17 @@ async def safe_answer(callback: CallbackQuery) -> None:
 _antispam = AntiSpamMiddleware()
 dp.message.middleware(_antispam)
 dp.callback_query.middleware(_antispam)
+
+
+# Срабатывает при добавлении/удалении бота из чата (не зависит от privacy mode,
+# в отличие от обычных сообщений) — нужен, чтобы узнать chat_id группы для
+# NOTIFY_CHAT_IDS: добавили бота в чат, посмотрели в логах контейнера этот id.
+@dp.my_chat_member()
+async def on_my_chat_member(update: ChatMemberUpdated) -> None:
+    print(
+        f"[my_chat_member] chat_id={update.chat.id} title={update.chat.title!r} "
+        f"status={update.new_chat_member.status}"
+    )
 
 
 # Command handler

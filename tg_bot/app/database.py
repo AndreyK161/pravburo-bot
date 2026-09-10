@@ -71,6 +71,18 @@ async def set_tag_by_name(user_id: int, tag_name: str) -> None:
         )
 
 
+async def get_consultation_lead(user_id: int) -> dict | None:
+    async with DB_POOL.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT username, name, phone, region, has_property, source, utm_source, utm_campaign
+            FROM tg_users WHERE user_id = $1
+            """,
+            user_id,
+        )
+    return dict(row) if row else None
+
+
 async def set_tag_by_name_if_untagged(user_id: int, tag_name: str) -> None:
     # Ставим тег только тому, у кого тега ещё нет вообще — чтобы не затирать
     # ни ручной тег админа, ни уже пройденную консультацию.

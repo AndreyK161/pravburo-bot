@@ -36,6 +36,11 @@ CONSULTATION_DONE_BLOCK = "consultation_contact"
 TAG_CONSULTATION_STARTED = "Консультация: нет"
 TAG_CONSULTATION_DONE = "Консультация: да"
 
+# Чаты, куда шлём уведомление о новой заявке (человек дошёл до CONSULTATION_DONE_BLOCK,
+# то есть оставил телефон). Бота нужно добавить в эти чаты обычным участником —
+# для отправки сообщений права администратора не нужны. id чатов через запятую.
+NOTIFY_CHAT_IDS = [int(x) for x in getenv("NOTIFY_CHAT_IDS", "").split(",") if x.strip()]
+
 # Антиспам: если юзер шлёт больше ANTISPAM_MAX_EVENTS сообщений/нажатий кнопок
 # за ANTISPAM_WINDOW_SECONDS — считаем его спамером и молчим ANTISPAM_MUTE_SECONDS
 # (ничего не обрабатываем и не отвечаем, кроме одного предупреждения при входе в мут).

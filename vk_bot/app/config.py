@@ -37,6 +37,12 @@ CONSULTATION_DONE_BLOCK = "consultation_contact"
 TAG_CONSULTATION_STARTED = "Консультация: нет"
 TAG_CONSULTATION_DONE = "Консультация: да"
 
+# Уведомление о новой заявке (CONSULTATION_DONE_BLOCK) шлём через Telegram-бота
+# @pravburohelpBot (у vk_bot нет своего Telegram-присутствия) — тот же токен и
+# те же id чатов, что настроены в tg_bot/.env (NOTIFY_CHAT_IDS).
+NOTIFY_BOT_TOKEN = getenv("NOTIFY_BOT_TOKEN")
+NOTIFY_CHAT_IDS = [int(x) for x in getenv("NOTIFY_CHAT_IDS", "").split(",") if x.strip()]
+
 # Антиспам: если юзер шлёт больше ANTISPAM_MAX_EVENTS сообщений/нажатий кнопок
 # за ANTISPAM_WINDOW_SECONDS — считаем его спамером и молчим ANTISPAM_MUTE_SECONDS
 # (ничего не обрабатываем и не отвечаем, кроме одного предупреждения при входе в мут).
