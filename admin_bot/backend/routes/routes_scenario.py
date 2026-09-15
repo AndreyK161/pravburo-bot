@@ -79,7 +79,13 @@ def _validate_scenario(scenario: dict) -> None:
                 )
 
         for button in block.get("buttons", []):
-            if not button.get("text") or not button.get("next"):
+            if not button.get("text"):
+                raise HTTPException(status_code=422, detail=f"Блок '{block_id}': у кнопки должен быть text")
+            if button.get("consent"):
+                # Кнопка согласия (CONSENT_BLOCK) не хранит next в JSON — следующий
+                # блок решает код бота (PENDING_DEEPLINK либо общее меню).
+                continue
+            if not button.get("next"):
                 raise HTTPException(status_code=422, detail=f"Блок '{block_id}': у кнопки должны быть text и next")
             if button["next"] not in blocks:
                 raise HTTPException(

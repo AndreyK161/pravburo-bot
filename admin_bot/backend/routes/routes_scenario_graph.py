@@ -39,6 +39,17 @@ async def get_scenario_graph():
     blocks = scenario["blocks"]
     start_id = scenario["start"]
 
+    def button_next(button: dict) -> str | None:
+        if "next" in button:
+            return button["next"]
+        if button.get("consent"):
+            # У кнопки согласия (CONSENT_BLOCK) нет фиксированного "next" в JSON —
+            # следующий блок решает код бота (PENDING_DEEPLINK либо общее меню).
+            # Для графа считаем целью то же, куда ведёт condition-блок при "подписан".
+            start_block = blocks.get(start_id, {})
+            return start_block.get("yes")
+        return None
+
     nodes = []
     edges = []
 
@@ -53,7 +64,7 @@ async def get_scenario_graph():
                 "is_start": block_id == start_id,
                 "preview": _clean_text(block.get("text")),
                 "auto_tag": AUTO_TAGS.get(block_id),
-                "buttons": [{"text": b["text"], "next": b["next"]} for b in block.get("buttons", [])],
+                "buttons": [{"text": b["text"], "next": button_next(b)} for b in block.get("buttons", [])],
             }
         )
 
@@ -66,7 +77,9 @@ async def get_scenario_graph():
             if block.get("auto_next"):
                 edges.append({"from": block_id, "to": block["auto_next"], "label": "автоматически"})
             for button in block.get("buttons", []):
-                edges.append({"from": block_id, "to": button["next"], "label": button["text"]})
+                target = button_next(button)
+                if target:
+                    edges.append({"from": block_id, "to": target, "label": button["text"]})
 
     return {"start": start_id, "nodes": nodes, "edges": edges}
 
