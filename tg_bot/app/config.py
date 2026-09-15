@@ -46,6 +46,14 @@ CONSENT_BLOCK = "consent"
 # для отправки сообщений права администратора не нужны. id чатов через запятую.
 NOTIFY_CHAT_IDS = [int(x) for x in getenv("NOTIFY_CHAT_IDS", "").split(",") if x.strip()]
 
+# Тот же момент (CONSULTATION_DONE_BLOCK) шлёт лид в Битрикс24 через входящий
+# вебхук вида https://ваш-домен.bitrix24.ru/rest/1/xxxxxxxx (без /crm.lead.add.json
+# на конце — путь метода добавляется в коде). BITRIX_SOURCE_ID_TG — значение
+# поля "Источник" для лидов из Telegram (код из справочника CRM, необязателен —
+# если не задан, поле просто не передаётся и Битрикс возьмёт свой дефолт).
+BITRIX_WEBHOOK_URL = getenv("BITRIX_WEBHOOK_URL")
+BITRIX_SOURCE_ID_TG = getenv("BITRIX_SOURCE_ID_TG")
+
 # Антиспам: если юзер шлёт больше ANTISPAM_MAX_EVENTS сообщений/нажатий кнопок
 # за ANTISPAM_WINDOW_SECONDS — считаем его спамером и молчим ANTISPAM_MUTE_SECONDS
 # (ничего не обрабатываем и не отвечаем, кроме одного предупреждения при входе в мут).

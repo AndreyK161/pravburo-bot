@@ -19,6 +19,7 @@ from config import (
     TAG_CONSULTATION_STARTED,
 )
 from database import set_blocked, set_tag_by_name, update_current_stage
+from bitrix import send_lead_to_bitrix
 from notify import notify_consultation_lead
 from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_ACTIVITY
 
@@ -144,6 +145,7 @@ async def _render_block(bot: Bot, chat_id: int, user_id: int, block_id: str, rep
     elif block_id == CONSULTATION_DONE_BLOCK:
         await set_tag_by_name(user_id, TAG_CONSULTATION_DONE)
         await notify_consultation_lead(bot, "Telegram", user_id)
+        await send_lead_to_bitrix("Telegram", user_id)
 
     keyboard = build_keyboard(block.get("buttons", []))
     prior_message = LAST_BOT_MESSAGE.get(user_id)

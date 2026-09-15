@@ -48,6 +48,13 @@ CONSENT_BLOCK = "consent"
 NOTIFY_BOT_TOKEN = getenv("NOTIFY_BOT_TOKEN")
 NOTIFY_CHAT_IDS = [int(x) for x in getenv("NOTIFY_CHAT_IDS", "").split(",") if x.strip()]
 
+# Тот же момент (CONSULTATION_DONE_BLOCK) шлёт лид в Битрикс24 через входящий
+# вебхук — тот же вебхук, что и у tg_bot (одна CRM на обе платформы).
+# BITRIX_SOURCE_ID_VK — значение поля "Источник" для лидов из VK (код из
+# справочника CRM, необязателен).
+BITRIX_WEBHOOK_URL = getenv("BITRIX_WEBHOOK_URL")
+BITRIX_SOURCE_ID_VK = getenv("BITRIX_SOURCE_ID_VK")
+
 # Антиспам: если юзер шлёт больше ANTISPAM_MAX_EVENTS сообщений/нажатий кнопок
 # за ANTISPAM_WINDOW_SECONDS — считаем его спамером и молчим ANTISPAM_MUTE_SECONDS
 # (ничего не обрабатываем и не отвечаем, кроме одного предупреждения при входе в мут).
