@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from config import (
-    SCENARIO_PATH,
-    SCENARIO_BACKUP_DIR,
+    DEFAULT_SCENARIO_PLATFORM,
+    SCENARIO_PLATFORMS,
     FILES_DIR,
     SAVE_AS_FIELDS,
     VALIDATOR_NAMES,
@@ -17,14 +17,31 @@ from config import (
 router = APIRouter(prefix="/api/scenario", tags=["scenario"])
 
 
+def _resolve_platform(platform: str) -> dict:
+    config = SCENARIO_PLATFORMS.get(platform)
+    if config is None:
+        raise HTTPException(status_code=422, detail=f"Неизвестная платформа сценария: {platform}")
+    return config
+
+
+@router.get("/platforms")
+async def get_scenario_platforms():
+    return {
+        "default": DEFAULT_SCENARIO_PLATFORM,
+        "platforms": [{"id": key, "label": value["label"]} for key, value in SCENARIO_PLATFORMS.items()],
+    }
+
+
 @router.get("")
-async def get_scenario():
-    return json.loads(SCENARIO_PATH.read_text(encoding="utf-8"))
+async def get_scenario(platform: str = DEFAULT_SCENARIO_PLATFORM):
+    path = _resolve_platform(platform)["path"]
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @router.get("/meta")
-async def get_scenario_meta():
-    scenario = json.loads(SCENARIO_PATH.read_text(encoding="utf-8"))
+async def get_scenario_meta(platform: str = DEFAULT_SCENARIO_PLATFORM):
+    path = _resolve_platform(platform)["path"]
+    scenario = json.loads(path.read_text(encoding="utf-8"))
     files = sorted(p.name for p in FILES_DIR.iterdir() if p.is_file()) if FILES_DIR.exists() else []
     return {
         "block_ids": sorted(scenario["blocks"].keys()),
@@ -100,13 +117,16 @@ def _validate_scenario(scenario: dict) -> None:
 
 
 @router.put("")
-async def put_scenario(scenario: dict):
+async def put_scenario(scenario: dict, platform: str = DEFAULT_SCENARIO_PLATFORM):
     _validate_scenario(scenario)
+    resolved = _resolve_platform(platform)
+    path = resolved["path"]
+    backup_dir = resolved["backup_dir"]
 
-    SCENARIO_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    backup_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-    backup_path = SCENARIO_BACKUP_DIR / f"scenario_{timestamp}.json"
-    backup_path.write_text(SCENARIO_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+    backup_path = backup_dir / f"scenario_{timestamp}.json"
+    backup_path.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
 
-    SCENARIO_PATH.write_text(json.dumps(scenario, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(scenario, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"ok": True, "backup": backup_path.name}

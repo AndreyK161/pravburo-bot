@@ -11,6 +11,9 @@ deploy/*
 data/scenario.json
 data/scenario_graph_positions.json
 data/scenario_backups/
+data/scenario_instagram.json
+data/scenario_graph_positions_instagram.json
+data/scenario_backups_instagram/
 
 # Дампы БД — могут содержать реальные данные пользователей, в git не место.
 *.sql

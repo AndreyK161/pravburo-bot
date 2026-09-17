@@ -1,3 +1,17 @@
+.nav-item {
+  color: #9ca3af;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f3f4f6;
+}
+
+.nav-item.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FBBF24;
+}
+
 .platform-toggle {
   display: inline-flex;
   align-items: center;
@@ -50,6 +64,11 @@
 .platform-badge-tg {
   background: #e0f2fe;
   color: #0369a1;
+}
+
+.platform-badge-ig {
+  background: #fce7f3;
+  color: #be185d;
 }
 
 .platform-badge-vk {

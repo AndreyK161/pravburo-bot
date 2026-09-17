@@ -17,6 +17,8 @@ async def get_sources_stats():
                 SELECT COALESCE(utm_source, source) AS source FROM tg_users
                 UNION ALL
                 SELECT source FROM vk_users
+                UNION ALL
+                SELECT source FROM ig_users
             ) u
             GROUP BY source
             ORDER BY users_count DESC

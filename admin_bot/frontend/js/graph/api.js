@@ -1,6 +1,6 @@
-export async function fetchSavedPositions(nodeIds) {
+export async function fetchSavedPositions(nodeIds, platform) {
   try {
-    const res = await fetch("/api/scenario-graph/positions");
+    const res = await fetch(`/api/scenario-graph/positions?platform=${encodeURIComponent(platform)}`);
     if (!res.ok) throw new Error("Failed to fetch graph positions");
     const saved = await res.json();
     // Набор блоков поменялся — старые координаты не описывают весь граф.
@@ -12,9 +12,9 @@ export async function fetchSavedPositions(nodeIds) {
   }
 }
 
-export async function savePositions(positions) {
+export async function savePositions(positions, platform) {
   try {
-    await fetch("/api/scenario-graph/positions", {
+    await fetch(`/api/scenario-graph/positions?platform=${encodeURIComponent(platform)}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(positions),

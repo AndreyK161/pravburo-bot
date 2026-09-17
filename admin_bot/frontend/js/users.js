@@ -26,10 +26,14 @@ function yesNoHtml(value) {
   return '<span class="text-gray-300">—</span>';
 }
 
+const PLATFORM_BADGES = {
+  tg: '<span class="platform-badge platform-badge-tg">TG</span>',
+  vk: '<span class="platform-badge platform-badge-vk">VK</span>',
+  ig: '<span class="platform-badge platform-badge-ig">Instagram</span>',
+};
+
 function platformBadgeHtml(platform) {
-  return platform === "vk"
-    ? '<span class="platform-badge platform-badge-vk">VK</span>'
-    : '<span class="platform-badge platform-badge-tg">TG</span>';
+  return PLATFORM_BADGES[platform] ?? PLATFORM_BADGES.tg;
 }
 
 function tagSelectHtml(userTagId) {

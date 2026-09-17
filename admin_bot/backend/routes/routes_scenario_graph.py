@@ -1,12 +1,12 @@
 import json
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from config import (
     CONSULTATION_DONE_BLOCK,
     CONSULTATION_START_BLOCK,
-    SCENARIO_GRAPH_POSITIONS_PATH,
-    SCENARIO_PATH,
+    DEFAULT_SCENARIO_PLATFORM,
+    SCENARIO_PLATFORMS,
     TAG_CONSULTATION_DONE,
     TAG_CONSULTATION_STARTED,
 )
@@ -27,6 +27,13 @@ AUTO_TAGS = {
 }
 
 
+def _resolve_platform(platform: str) -> dict:
+    config = SCENARIO_PLATFORMS.get(platform)
+    if config is None:
+        raise HTTPException(status_code=422, detail=f"Неизвестная платформа сценария: {platform}")
+    return config
+
+
 def _clean_text(text: str | None) -> str | None:
     if not text:
         return None
@@ -34,8 +41,9 @@ def _clean_text(text: str | None) -> str | None:
 
 
 @router.get("")
-async def get_scenario_graph():
-    scenario = json.loads(SCENARIO_PATH.read_text(encoding="utf-8"))
+async def get_scenario_graph(platform: str = DEFAULT_SCENARIO_PLATFORM):
+    path = _resolve_platform(platform)["path"]
+    scenario = json.loads(path.read_text(encoding="utf-8"))
     blocks = scenario["blocks"]
     start_id = scenario["start"]
 
@@ -85,22 +93,24 @@ async def get_scenario_graph():
 
 
 @router.get("/positions")
-async def get_graph_positions():
-    if not SCENARIO_GRAPH_POSITIONS_PATH.exists():
+async def get_graph_positions(platform: str = DEFAULT_SCENARIO_PLATFORM):
+    positions_path = _resolve_platform(platform)["positions_path"]
+    if not positions_path.exists():
         return {}
-    return json.loads(SCENARIO_GRAPH_POSITIONS_PATH.read_text(encoding="utf-8"))
+    return json.loads(positions_path.read_text(encoding="utf-8"))
 
 
 @router.put("/positions")
-async def put_graph_positions(positions: dict[str, dict[str, float]]):
+async def put_graph_positions(positions: dict[str, dict[str, float]], platform: str = DEFAULT_SCENARIO_PLATFORM):
     # Раскладка общая для всех, кто открывает граф, поэтому сохраняем только
     # координаты реально существующих блоков — иначе устаревшие/чужие id будут
     # копиться в файле вечно.
-    block_ids = set(json.loads(SCENARIO_PATH.read_text(encoding="utf-8"))["blocks"].keys())
+    resolved = _resolve_platform(platform)
+    block_ids = set(json.loads(resolved["path"].read_text(encoding="utf-8"))["blocks"].keys())
     clean = {
         block_id: {"x": pos["x"], "y": pos["y"]}
         for block_id, pos in positions.items()
         if block_id in block_ids and "x" in pos and "y" in pos
     }
-    SCENARIO_GRAPH_POSITIONS_PATH.write_text(json.dumps(clean, ensure_ascii=False, indent=2), encoding="utf-8")
+    resolved["positions_path"].write_text(json.dumps(clean, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"ok": True}

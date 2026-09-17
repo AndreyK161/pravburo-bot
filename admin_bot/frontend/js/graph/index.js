@@ -4,10 +4,18 @@ import { renderLegend, nodeDataset, edgeDataset, renderDetail } from "./render.j
 import { setupIdleJiggle } from "./idle-jiggle.js";
 import { setupFling } from "./fling.js";
 import { setupTrackpadPanning } from "./trackpad-panning.js";
+import {
+  getScenarioPlatform,
+  loadScenarioPlatforms,
+  onScenarioPlatformChange,
+  renderPlatformSwitcher,
+} from "../scenario-platform.js";
 
 let network = null;
 let idleJiggle = null;
 let graphTabVisible = false;
+let loadedPlatform = null;
+let platformsInitialized = false;
 
 export function setGraphTabVisible(visible) {
   graphTabVisible = visible;
@@ -21,11 +29,28 @@ document.addEventListener("visibilitychange", () => {
 });
 
 export async function loadGraph() {
-  if (network) return; // граф уже построен и живёт своей физикой
+  if (!platformsInitialized) {
+    platformsInitialized = true;
+    await loadScenarioPlatforms();
+    renderPlatformSwitcher(document.getElementById("graphPlatformSwitcher"));
+    onScenarioPlatformChange(() => loadGraph());
+  }
+
+  const platform = getScenarioPlatform();
+  if (network && loadedPlatform === platform) return; // граф уже построен и живёт своей физикой
+
+  if (network) {
+    idleJiggle?.pause();
+    network.destroy();
+    network = null;
+    idleJiggle = null;
+    document.getElementById("graphDetailContent").classList.add("hidden");
+    document.getElementById("graphDetailEmpty").classList.remove("hidden");
+  }
 
   let graphData;
   try {
-    const res = await fetch("/api/scenario-graph");
+    const res = await fetch(`/api/scenario-graph?platform=${encodeURIComponent(platform)}`);
     if (!res.ok) throw new Error("Failed to fetch scenario graph");
     graphData = await res.json();
   } catch {
@@ -36,7 +61,7 @@ export async function loadGraph() {
   renderLegend(graphData);
 
   const nodeIds = graphData.nodes.map((n) => n.id);
-  const savedPositions = await fetchSavedPositions(nodeIds);
+  const savedPositions = await fetchSavedPositions(nodeIds, platform);
 
   const container = document.getElementById("scenarioGraph");
   const data = {
@@ -64,6 +89,7 @@ export async function loadGraph() {
   };
 
   network = new vis.Network(container, data, options);
+  loadedPlatform = platform;
 
   graphTabVisible = true;
   idleJiggle = setupIdleJiggle(network);
@@ -85,7 +111,7 @@ export async function loadGraph() {
     network.once("stabilizationIterationsDone", () => {
       const positions = network.getPositions();
       idleJiggle?.setAnchors(positions);
-      savePositions(positions);
+      savePositions(positions, platform);
     });
   }
 

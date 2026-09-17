@@ -17,7 +17,9 @@ FILTERABLE_FIELDS = {
 }
 
 # Платформа тоже белый список - имя таблицы нельзя подставлять в SQL как есть.
-PLATFORM_TABLES = {"tg": "tg_users", "vk": "vk_users"}
+# "ig" (Instagram) пока без своего бота — таблица уже есть и пуста, готова
+# принять пользователей, когда бот появится.
+PLATFORM_TABLES = {"tg": "tg_users", "vk": "vk_users", "ig": "ig_users"}
 
 USERS_UNION = " UNION ALL ".join(
     f"SELECT *, '{platform}' AS platform FROM {table}" for platform, table in PLATFORM_TABLES.items()

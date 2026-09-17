@@ -25,10 +25,28 @@ SESSION_COOKIE_SECURE = getenv("SESSION_COOKIE_SECURE", "false").lower() == "tru
 
 BASE_DIR = Path(__file__).parent.parent.parent  # bot_pravburo/admin_bot/backend -> bot_pravburo
 DATA_DIR = BASE_DIR / "data"
-SCENARIO_PATH = DATA_DIR / "scenario.json"
-SCENARIO_BACKUP_DIR = DATA_DIR / "scenario_backups"
-SCENARIO_GRAPH_POSITIONS_PATH = DATA_DIR / "scenario_graph_positions.json"
 FILES_DIR = DATA_DIR / "files"
+
+# Разные боты — разные сценарии. tg_bot и vk_bot пока делят один и тот же
+# scenario.json ("tg_vk"), будущий Instagram-бот получит свой ("instagram") —
+# отдельные файлы, бэкапы и раскладка графа, чтобы блоки/координаты одного
+# сценария не путались с другим. DEFAULT_SCENARIO_PLATFORM — та, что открывается
+# по умолчанию (совпадает с тем, что сейчас реально крутится в проде).
+DEFAULT_SCENARIO_PLATFORM = "tg_vk"
+SCENARIO_PLATFORMS = {
+    "tg_vk": {
+        "label": "TG / VK",
+        "path": DATA_DIR / "scenario.json",
+        "backup_dir": DATA_DIR / "scenario_backups",
+        "positions_path": DATA_DIR / "scenario_graph_positions.json",
+    },
+    "instagram": {
+        "label": "Instagram",
+        "path": DATA_DIR / "scenario_instagram.json",
+        "backup_dir": DATA_DIR / "scenario_backups_instagram",
+        "positions_path": DATA_DIR / "scenario_graph_positions_instagram.json",
+    },
+}
 
 # Должно совпадать с tg_bot/app/config.py (USER_FIELD_COLUMNS) и tg_bot/app/validators.py (VALIDATORS)
 # бота — это те же самые белые списки, продублированные тут для валидации сценария.

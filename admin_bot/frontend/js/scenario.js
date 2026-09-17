@@ -1,6 +1,7 @@
 import { escapeHtml } from "./utils.js";
 import { showToast } from "./toast.js";
 import { confirmModal } from "./modal.js";
+import { getScenarioPlatform, loadScenarioPlatforms, onScenarioPlatformChange, renderPlatformSwitcher } from "./scenario-platform.js";
 
 const TYPE_LABELS = {
   message: "Сообщение",
@@ -18,10 +19,22 @@ const DEFAULT_BLOCK_TEMPLATE = {
 let scenario = null;
 let meta = null;
 let editingBlockId = null; // null => создаём новый блок
+let platformsInitialized = false;
 
 export async function loadScenario() {
+  if (!platformsInitialized) {
+    platformsInitialized = true;
+    await loadScenarioPlatforms();
+    renderPlatformSwitcher(document.getElementById("scenarioPlatformSwitcher"));
+    onScenarioPlatformChange(() => loadScenario());
+  }
+
+  const platform = getScenarioPlatform();
   try {
-    const [scenarioRes, metaRes] = await Promise.all([fetch("/api/scenario"), fetch("/api/scenario/meta")]);
+    const [scenarioRes, metaRes] = await Promise.all([
+      fetch(`/api/scenario?platform=${encodeURIComponent(platform)}`),
+      fetch(`/api/scenario/meta?platform=${encodeURIComponent(platform)}`),
+    ]);
     if (!scenarioRes.ok || !metaRes.ok) throw new Error("Failed to fetch scenario");
     scenario = await scenarioRes.json();
     meta = await metaRes.json();
@@ -145,7 +158,7 @@ document.getElementById("blockEditorForm").addEventListener("submit", async (e) 
   const updatedScenario = { ...scenario, blocks: { ...scenario.blocks, [blockId]: block } };
 
   try {
-    const res = await fetch("/api/scenario", {
+    const res = await fetch(`/api/scenario?platform=${encodeURIComponent(getScenarioPlatform())}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedScenario),
