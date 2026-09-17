@@ -2,15 +2,15 @@
 set -euo pipefail
 
 PROJECT_DIR="/home/botuser/pravburo-bot"
-CHAT_ID="-1004466321275"
-MESSAGE_THREAD_ID="7"
+CHAT_ID="-1004327365114"
+MESSAGE_THREAD_ID="8"
 
 # WireGuard-адрес сервера БД (РФ) — см. deploy/SPLIT_DEPLOYMENT.md
 DB_HOST="10.10.10.1"
 DB_PORT="5432"
 
 cd "$PROJECT_DIR"
-source bot/.env  # даёт BOT_TOKEN
+source tg_bot/.env  # даёт BOT_TOKEN
 source .env      # даёт POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB
 
 DUMP_FILE="$(date +%F)_dump.sql"
