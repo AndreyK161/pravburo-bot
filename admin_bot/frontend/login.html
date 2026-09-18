@@ -37,8 +37,11 @@
   const form = document.getElementById("loginForm");
   const errorEl = document.getElementById("loginError");
 
-  if (new URLSearchParams(window.location.search).has("expired")) {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("expired")) {
     errorEl.textContent = "Сессия истекла, войдите заново";
+  } else if (params.has("sso_failed")) {
+    errorEl.textContent = "Не удалось войти через LK — попробуйте обычный вход";
   }
 
   form.addEventListener("submit", async (e) => {

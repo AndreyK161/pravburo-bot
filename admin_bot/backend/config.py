@@ -19,9 +19,32 @@ BROADCAST_MAX_CONCURRENCY = 30
 SESSION_SECRET_KEY = getenv("SESSION_SECRET_KEY")
 SESSION_COOKIE_NAME = "admin_session"
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 12  # 12 часов
+
+# Refresh-кука — отдельная и живёт дольше сессионной: пока она валидна, require_auth
+# сам молча перевыпускает сессию вместо того, чтобы слать на /login каждые 12ч.
+REFRESH_COOKIE_NAME = "admin_refresh"
+REFRESH_MAX_AGE_SECONDS = 60 * 60 * 24 * 7  # 7 дней
 # Cookie должна быть Secure только когда сайт реально отдаётся по HTTPS -
 # иначе браузер её просто не отправит и логин будет всегда падать.
 SESSION_COOKIE_SECURE = getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+
+# SSO с общей LK-панелью (PravBuroLK/services/admin_panel_service) — то же
+# значение jwt_secret/jwt_algorithm, что в её backend/.env, иначе подпись не
+# сойдётся. Работает пока в одну сторону (LK выдаёт токен -> сюда, GET /api/auth/sso) —
+# обратное направление требует правок в самом LK-хабе (он подтягивает юзера
+# из своей БД по id из токена), см. договорённость в чате.
+SSO_JWT_SECRET = getenv("SSO_JWT_SECRET")
+SSO_JWT_ALGORITHM = "HS256"
+
+# Пункт "LK Правбюро" в переключалке панелей — пока просто ссылка (без SSO
+# в эту сторону, см. выше), ведёт на другой сервер/сервис. LK-хаб (admin_panel_service)
+# висит на корне panel.prav-buro.ru (см. её deploy/nginx-panel.prav-buro.ru.conf) —
+# отдельного /admin-panel пути там нет.
+LK_ADMIN_URL = getenv("LK_ADMIN_URL", "https://panel.prav-buro.ru")
+
+# Роль в LK -> наша роль. У нас нет отдельной "только просмотр" роли под
+# маркетологов LK, поэтому "marketer" в SSO не пускаем вообще.
+SSO_ROLE_MAP = {"admin": "admin", "director": "manager"}
 
 BASE_DIR = Path(__file__).parent.parent.parent  # bot_pravburo/admin_bot/backend -> bot_pravburo
 DATA_DIR = BASE_DIR / "data"
