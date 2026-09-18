@@ -36,15 +36,15 @@ SESSION_COOKIE_SECURE = getenv("SESSION_COOKIE_SECURE", "false").lower() == "tru
 SSO_JWT_SECRET = getenv("SSO_JWT_SECRET")
 SSO_JWT_ALGORITHM = "HS256"
 
-# Пункт "LK Правбюро" в переключалке панелей — пока просто ссылка (без SSO
-# в эту сторону, см. выше), ведёт на другой сервер/сервис. LK-хаб (admin_panel_service)
+# Пункт "LK Правбюро" в переключалке панелей — используется и для ссылки, и как
+# редирект-цель GET /api/auth/sso-to-lk (обратный SSO). LK-хаб (admin_panel_service)
 # висит на корне panel.prav-buro.ru (см. её deploy/nginx-panel.prav-buro.ru.conf) —
 # отдельного /admin-panel пути там нет.
 LK_ADMIN_URL = getenv("LK_ADMIN_URL", "https://panel.prav-buro.ru")
 
-# Роль в LK -> наша роль. У нас нет отдельной "только просмотр" роли под
-# маркетологов LK, поэтому "marketer" в SSO не пускаем вообще.
-SSO_ROLE_MAP = {"admin": "admin", "director": "manager"}
+# Роль в LK -> наша роль. Отдельной "только просмотр" роли под маркетологов LK
+# у нас нет, поэтому marketer заходит с правами обычного менеджера.
+SSO_ROLE_MAP = {"admin": "admin", "director": "manager", "marketer": "manager"}
 
 BASE_DIR = Path(__file__).parent.parent.parent  # bot_pravburo/admin_bot/backend -> bot_pravburo
 DATA_DIR = BASE_DIR / "data"
