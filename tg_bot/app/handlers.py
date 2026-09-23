@@ -29,6 +29,7 @@ DEEPLINK_BLOCKS = {
     "detskie": "stub_children",
     "otmena": "stub_cancel",
     "checklist": "checklist_menu",
+    "banki": "topic_stop_work_for_banks",
 }
 
 
