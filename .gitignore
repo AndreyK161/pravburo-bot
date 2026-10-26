@@ -9,8 +9,11 @@ deploy/*
 # Правится вручную/через админку прямо на проде — держать в git смысла нет,
 # только конфликтует с каждым pull.
 data/scenario.json
+data/scenario_old.json
 data/scenario_graph_positions.json
+data/scenario_graph_positions_old.json
 data/scenario_backups/
+data/scenario_backups_old/
 data/scenario_instagram.json
 data/scenario_graph_positions_instagram.json
 data/scenario_backups_instagram/

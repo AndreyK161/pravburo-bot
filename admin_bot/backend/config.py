@@ -50,24 +50,16 @@ BASE_DIR = Path(__file__).parent.parent.parent  # bot_pravburo/admin_bot/backend
 DATA_DIR = BASE_DIR / "data"
 FILES_DIR = DATA_DIR / "files"
 
-# Разные боты — разные сценарии. tg_bot и vk_bot пока делят один и тот же
-# scenario.json ("tg_vk"), будущий Instagram-бот получит свой ("instagram") —
-# отдельные файлы, бэкапы и раскладка графа, чтобы блоки/координаты одного
-# сценария не путались с другим. DEFAULT_SCENARIO_PLATFORM — та, что открывается
-# по умолчанию (совпадает с тем, что сейчас реально крутится в проде).
-DEFAULT_SCENARIO_PLATFORM = "tg_vk"
+# В админке временно показываем старый сценарий. Новый сценарий продолжает
+# жить в data/scenario.json и используется ботом, но не показывается в UI,
+# чтобы его случайно не изменить во время подготовки новой схемы.
+DEFAULT_SCENARIO_PLATFORM = "legacy"
 SCENARIO_PLATFORMS = {
-    "tg_vk": {
-        "label": "TG / VK",
-        "path": DATA_DIR / "scenario.json",
-        "backup_dir": DATA_DIR / "scenario_backups",
-        "positions_path": DATA_DIR / "scenario_graph_positions.json",
-    },
-    "instagram": {
-        "label": "Instagram",
-        "path": DATA_DIR / "scenario_instagram.json",
-        "backup_dir": DATA_DIR / "scenario_backups_instagram",
-        "positions_path": DATA_DIR / "scenario_graph_positions_instagram.json",
+    "legacy": {
+        "label": "Старый бот",
+        "path": DATA_DIR / "scenario_old.json",
+        "backup_dir": DATA_DIR / "scenario_backups_old",
+        "positions_path": DATA_DIR / "scenario_graph_positions_old.json",
     },
 }
 
@@ -79,13 +71,17 @@ VALIDATOR_NAMES = ["phone"]
 # так как это не поле input-блока, а значение, которое запоминает нажатие кнопки.
 BUTTON_SET_FIELDS = ["has_property"]
 
-BLOCK_TYPES = ["message", "document", "input", "condition", "delay"]
+BLOCK_TYPES = ["message", "document", "video", "video_note", "input", "referral_input", "condition", "delay", "quiz_result"]
 BLOCK_REQUIRED_FIELDS = {
     "message": ["text"],
     "document": ["text", "file"],
+    "video_note": ["file"],
+    "video": ["file"],
     "input": ["text", "save_as", "next"],
+    "referral_input": ["text", "next", "failure"],
     "condition": ["channel", "yes", "no"],
     "delay": ["seconds", "next"],
+    "quiz_result": ["ranges", "default"],
 }
 
 # Должно совпадать с tg_bot/app/config.py — id блоков, при входе в которые бот

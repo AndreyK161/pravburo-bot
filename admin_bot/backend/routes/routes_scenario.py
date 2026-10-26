@@ -81,19 +81,29 @@ def _validate_scenario(scenario: dict) -> None:
                 status_code=422, detail=f"Блок '{block_id}': недопустимое значение validate '{block['validate']}'"
             )
 
-        if block_type == "document":
+        if block_type in ("document", "video", "video_note"):
             file_names = block["file"] if isinstance(block["file"], list) else [block["file"]]
             for name in file_names:
                 if not (FILES_DIR / name).exists():
                     raise HTTPException(status_code=422, detail=f"Блок '{block_id}': файл '{name}' не найден")
 
-        ref_fields = [f for f in ("next", "auto_next", "yes", "no") if block.get(f)]
+        if block_type == "quiz_result":
+            targets = [r.get("next") for r in block["ranges"]] + [block["default"]]
+            for target in targets:
+                if target not in blocks:
+                    raise HTTPException(
+                        status_code=422, detail=f"Блок '{block_id}': итог теста ссылается на несуществующий блок '{target}'"
+                    )
+
+        ref_fields = [f for f in ("next", "auto_next", "yes", "no", "failure") if block.get(f)]
         for field in ref_fields:
-            if block[field] not in blocks:
-                raise HTTPException(
-                    status_code=422,
-                    detail=f"Блок '{block_id}': поле '{field}' ссылается на несуществующий блок '{block[field]}'",
-                )
+            targets = block[field] if isinstance(block[field], list) else [block[field]]
+            for target in targets:
+                if target not in blocks:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Блок '{block_id}': поле '{field}' ссылается на несуществующий блок '{target}'",
+                    )
 
         for button in block.get("buttons", []):
             if not button.get("text"):
@@ -102,8 +112,11 @@ def _validate_scenario(scenario: dict) -> None:
                 # Кнопка согласия (CONSENT_BLOCK) не хранит next в JSON — следующий
                 # блок решает код бота (PENDING_DEEPLINK либо общее меню).
                 continue
+            if button.get("url"):
+                # Кнопка-ссылка — ведёт наружу, next не нужен.
+                continue
             if not button.get("next"):
-                raise HTTPException(status_code=422, detail=f"Блок '{block_id}': у кнопки должны быть text и next")
+                raise HTTPException(status_code=422, detail=f"Блок '{block_id}': у кнопки должны быть text и next (или url)")
             if button["next"] not in blocks:
                 raise HTTPException(
                     status_code=422,

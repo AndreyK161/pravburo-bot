@@ -1,43 +1,70 @@
+# Один compose-файл для обоих серверов. Что именно поднимется, решает
+# COMPOSE_PROFILES в корневом .env (см. .env-example и README.md):
+#   сервер РФ (БД)            -> COMPOSE_PROFILES=db
+#   сервер NL (боты + админка) -> COMPOSE_PROFILES=app
+# После этого везде работает просто `docker compose up -d` / `make up`.
+
+x-db-url: &db-url
+  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST}:${DB_PORT:-5432}/${POSTGRES_DB:-bot_pravburo}
+
 services:
+  db:
+    profiles: [db]
+    image: postgres:16-alpine
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-bot_pravburo}
+    ports:
+      # Слушаем ТОЛЬКО на WireGuard-интерфейсе (DB_BIND_ADDRESS), наружу в интернет порт не торчит.
+      - "${DB_BIND_ADDRESS}:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   tg_bot:
+    profiles: [app]
     build:
       context: .
       dockerfile: tg_bot/Dockerfile
     container_name: pravburo_bot
     restart: always
-    env_file:
-      - tg_bot/.env
-    environment:
-      # DB_HOST — WireGuard-адрес сервера БД (РФ), см. deploy/SPLIT_DEPLOYMENT.md.
-      # Значения POSTGRES_*/DB_HOST берутся из корневого .env (не в git).
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST}:${DB_PORT:-5432}/${POSTGRES_DB:-bot_pravburo}
+    env_file: tg_bot/.env
+    environment: *db-url
     volumes:
       - ./data:/app/data
 
   vk_bot:
+    profiles: [app]
     build:
       context: .
       dockerfile: vk_bot/Dockerfile
     container_name: pravburo_vk_bot
     restart: always
-    env_file:
-      - vk_bot/.env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST}:${DB_PORT:-5432}/${POSTGRES_DB:-bot_pravburo}
+    env_file: vk_bot/.env
+    environment: *db-url
     volumes:
       - ./data:/app/data
 
   admin:
+    profiles: [app]
     build:
       context: .
       dockerfile: admin_bot/backend/Dockerfile
     container_name: pravburo_admin
     restart: always
-    env_file:
-      - admin_bot/backend/.env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${DB_HOST}:${DB_PORT:-5432}/${POSTGRES_DB:-bot_pravburo}
+    env_file: admin_bot/backend/.env
+    environment: *db-url
     volumes:
       - ./data:/app/data
     ports:
       - "127.0.0.1:8123:8000"
+
+volumes:
+  postgres_data:

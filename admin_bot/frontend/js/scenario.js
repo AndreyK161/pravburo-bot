@@ -6,9 +6,11 @@ import { getScenarioPlatform, loadScenarioPlatforms, onScenarioPlatformChange, r
 const TYPE_LABELS = {
   message: "Сообщение",
   document: "Документ/файл",
+  video_note: "Кружок",
   input: "Вопрос пользователю",
   condition: "Проверка подписки",
   delay: "Задержка",
+  quiz_result: "Итог теста",
 };
 
 const DEFAULT_BLOCK_TEMPLATE = {

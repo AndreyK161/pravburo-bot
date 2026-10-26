@@ -5,10 +5,19 @@ from aiogram.types import CallbackQuery, ChatMemberUpdated, InlineKeyboardButton
 
 from antispam import AntiSpamMiddleware
 from config import TAG_CONSULTATION_STARTED
-from database import save_user_field, set_tag_by_name_if_untagged, upsert_user
-from scenario_engine import SCENARIO, gate_next_block, render_block
+from bitrix import send_referral_to_bitrix
+from database import (
+    cancel_user_steps,
+    record_activity,
+    save_quiz_answer,
+    save_user_field,
+    save_referral_contact,
+    set_tag_by_name_if_untagged,
+    upsert_user,
+)
+from scenario_engine import SCENARIO, gate_next_block, render_block, run_in_background
 from state import AWAITING_INPUT, LAST_BOT_MESSAGE, PENDING_DEEPLINK, USER_DATA, touch
-from validators import VALIDATORS
+from validators import VALIDATORS, parse_referral_contact
 
 dp = Dispatcher()
 
@@ -74,10 +83,15 @@ async def on_my_chat_member(update: ChatMemberUpdated) -> None:
     )
 
 
+async def mark_active(user_id: int) -> None:
+    touch(user_id)
+    await record_activity(user_id)
+
+
 # Command handler
 @dp.message(Command("start"))
 async def command_start_handler(message: Message, bot: Bot, command: CommandObject) -> None:
-    touch(message.from_user.id)
+    await mark_active(message.from_user.id)
     AWAITING_INPUT.pop(message.from_user.id, None)
     # command.args — это то, что стоит после /start (метка из ссылки вида
     # t.me/tg_bot?start=kollektory_vk_1). При повторных заходах не перезаписывается.
@@ -89,6 +103,7 @@ async def command_start_handler(message: Message, bot: Bot, command: CommandObje
     await set_tag_by_name_if_untagged(message.from_user.id, TAG_CONSULTATION_STARTED)
 
     PENDING_DEEPLINK.pop(message.from_user.id, None)
+    await cancel_user_steps(message.from_user.id)
     if target_block_id:
         start_block_id = await gate_next_block(bot, message.from_user.id, target_block_id)
         if start_block_id != target_block_id:
@@ -106,7 +121,7 @@ async def command_start_handler(message: Message, bot: Bot, command: CommandObje
 # по диплинку на конкретный раздел, туда (см. PENDING_DEEPLINK).
 @dp.callback_query(F.data == "consent:accept")
 async def consent_accept_handler(callback: CallbackQuery, bot: Bot) -> None:
-    touch(callback.from_user.id)
+    await mark_active(callback.from_user.id)
     AWAITING_INPUT.pop(callback.from_user.id, None)
     start_block = SCENARIO["blocks"][SCENARIO["start"]]
     next_block_id = PENDING_DEEPLINK.pop(callback.from_user.id, None) or start_block["yes"]
@@ -117,7 +132,7 @@ async def consent_accept_handler(callback: CallbackQuery, bot: Bot) -> None:
 # Callback handler для кнопок сценария (block:<next_block_id>)
 @dp.callback_query(F.data.startswith("block:"))
 async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
-    touch(callback.from_user.id)
+    await mark_active(callback.from_user.id)
     AWAITING_INPUT.pop(callback.from_user.id, None)
     next_block_id = callback.data.removeprefix("block:")
     next_block_id = await gate_next_block(bot, callback.from_user.id, next_block_id)
@@ -130,11 +145,25 @@ async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
 # на вопрос про залоговое имущество.
 @dp.callback_query(F.data.startswith("field:"))
 async def scenario_field_button_handler(callback: CallbackQuery, bot: Bot) -> None:
-    touch(callback.from_user.id)
+    await mark_active(callback.from_user.id)
     AWAITING_INPUT.pop(callback.from_user.id, None)
     payload, next_block_id = callback.data.removeprefix("field:").split(":", 1)
     field, value = payload.split("=", 1)
     await save_user_field(callback.from_user.id, field, value)
+    next_block_id = await gate_next_block(bot, callback.from_user.id, next_block_id)
+    await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
+    await safe_answer(callback)
+
+
+# Кнопки квиза: кроме перехода запоминают баллы за ответ
+# (quiz:<вопрос>=<баллы>:<next_block_id>). Сумму считаем при подведении итогов.
+@dp.callback_query(F.data.startswith("quiz:"))
+async def quiz_button_handler(callback: CallbackQuery, bot: Bot) -> None:
+    await mark_active(callback.from_user.id)
+    AWAITING_INPUT.pop(callback.from_user.id, None)
+    payload, next_block_id = callback.data.removeprefix("quiz:").split(":", 1)
+    question, score = payload.split("=", 1)
+    await save_quiz_answer(callback.from_user.id, question, int(score))
     next_block_id = await gate_next_block(bot, callback.from_user.id, next_block_id)
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
     await safe_answer(callback)
@@ -146,18 +175,43 @@ async def scenario_field_button_handler(callback: CallbackQuery, bot: Bot) -> No
 @dp.message()
 async def fallback_text_handler(message: Message, bot: Bot) -> None:
     user_id = message.from_user.id
-    touch(user_id)
+    await mark_active(user_id)
 
     pending = AWAITING_INPUT.get(user_id)
+    if pending and pending.get("kind") == "referral":
+        contact = parse_referral_contact(message.text)
+        if contact is None:
+            pending["attempts"] = pending.get("attempts", 0) + 1
+            if pending["attempts"] >= 2:
+                AWAITING_INPUT.pop(user_id, None)
+                await render_block(bot, message.chat.id, user_id, pending["failure"], replace=False)
+            else:
+                await bot.send_message(
+                    message.chat.id,
+                    "<b>Кажется, в сообщении нет номера телефона.</b> Пришлите, пожалуйста, имя и номер одним сообщением, например: Сергей, +7 900 123-45-67.",
+                    parse_mode="HTML",
+                )
+            return
+        referral = await save_referral_contact(
+            user_id,
+            getattr(message.from_user, "full_name", None) or message.from_user.username or str(user_id),
+            message.from_user.username,
+            contact[0], contact[1], message.chat.id, message.message_id,
+        )
+        AWAITING_INPUT.pop(user_id, None)
+        await render_block(bot, message.chat.id, user_id, pending["next"], replace=False)
+        run_in_background(send_referral_to_bitrix(referral))
+        return
+
     if pending:
         value = message.text
         validator = VALIDATORS.get(pending.get("validate"))
         if validator:
-            value = validator(message.text)
+            value = validator(message.text or "")
             if value is None:
                 await bot.send_message(
                     message.chat.id,
-                    "Не похоже на номер телефона. Введите номер в формате +7XXXXXXXXXX или 8XXXXXXXXXX",
+                    "Не похоже на номер телефона. Введите номер в формате 89005555555",
                 )
                 return  # ждём ввод ещё раз, AWAITING_INPUT не трогаем
 

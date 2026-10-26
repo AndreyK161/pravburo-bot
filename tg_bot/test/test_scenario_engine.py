@@ -5,7 +5,9 @@ import pytest
 from aiogram.exceptions import TelegramBadRequest
 
 import scenario_engine
+import database
 import state
+from scheduler import process_due_steps
 from scenario_engine import build_keyboard, render_block
 
 
@@ -71,6 +73,13 @@ def scenario(monkeypatch):
                 "text": "Второе сообщение цепочки",
                 "buttons": [],
             },
+            "fork": {
+                "type": "message",
+                "text": "Развилка",
+                "auto_next": ["fork_reminder", "fork_always"],
+            },
+            "fork_reminder": {"type": "delay", "seconds": 0, "next": "chained_b"},
+            "fork_always": {"type": "delay", "seconds": 0, "always": True, "next": "welcome"},
             "waiter": {
                 "type": "delay",
                 "seconds": 0,
@@ -182,26 +191,6 @@ async def test_auto_next_chains_to_next_block(bot, scenario, monkeypatch):
     assert texts == ["Первое сообщение цепочки", "Второе сообщение цепочки"]
 
 
-async def test_delay_block_continues_if_user_inactive(bot, scenario):
-    # seconds=0 у блока "waiter" в тестовом сценарии — asyncio.sleep не патчим,
-    # чтобы не мешать себе же дожидаться завершения фоновой задачи ниже.
-    await render_block(bot, chat_id=1, user_id=42, block_id="waiter")
-    await let_background_tasks_run()
-
-    bot.send_message.assert_awaited_once()
-    assert bot.send_message.call_args[0][1] == "Привет!"
-
-
-async def test_delay_block_skips_if_user_became_active(bot, scenario):
-    state.USER_ACTIVITY[42] = 0
-
-    await render_block(bot, chat_id=1, user_id=42, block_id="waiter")
-    state.USER_ACTIVITY[42] = 1  # юзер успел что-то нажать, пока бот "спал"
-    await let_background_tasks_run()
-
-    bot.send_message.assert_not_awaited()
-
-
 async def test_document_block_reports_missing_file(bot, monkeypatch, scenario):
     test_scenario = scenario_engine.SCENARIO
     test_scenario["blocks"]["missing_doc"] = {
@@ -216,3 +205,135 @@ async def test_document_block_reports_missing_file(bot, monkeypatch, scenario):
     bot.send_message.assert_awaited_once()
     assert "не загружены" in bot.send_message.call_args[0][1]
     bot.send_document.assert_not_awaited()
+
+
+async def test_quiz_result_routes_by_score_ranges(bot, scenario, monkeypatch):
+    scenario["blocks"]["result"] = {
+        "type": "quiz_result",
+        "ranges": [{"max": 3, "next": "welcome"}],
+        "default": "chained_b",
+    }
+    for score, expected in [(0, "Привет!"), (3, "Привет!"), (4, "Второе сообщение цепочки")]:
+        bot.send_message.reset_mock()
+
+        async def fake_score(user_id, prefix="", score=score):
+            return score
+
+        monkeypatch.setattr(scenario_engine, "get_quiz_score", fake_score)
+        await render_block(bot, chat_id=1, user_id=42, block_id="result", replace=False)
+        assert bot.send_message.call_args[0][1] == expected
+
+
+# --- отложенные шаги (delay-блоки хранятся в БД, отправляет планировщик) ---
+
+async def _ensure_user(user_id: int = 42) -> None:
+    async with database.DB_POOL.acquire() as conn:
+        await conn.execute("DELETE FROM scheduled_steps WHERE user_id = $1", user_id)
+        await conn.execute(
+            "INSERT INTO tg_users (user_id, chat_id) VALUES ($1, 1) "
+            "ON CONFLICT (user_id) DO UPDATE SET last_activity_at = NULL",
+            user_id,
+        )
+
+
+async def test_delay_block_sends_when_user_inactive(bot, scenario):
+    await _ensure_user()
+    await render_block(bot, chat_id=1, user_id=42, block_id="waiter")
+    bot.send_message.assert_not_awaited()  # пауза только запланирована
+
+    assert await process_due_steps(bot) == 1
+    bot.send_message.assert_awaited_once()
+    assert bot.send_message.call_args[0][1] == "Привет!"
+
+
+async def test_delay_block_skips_if_user_became_active(bot, scenario):
+    await _ensure_user()
+    await render_block(bot, chat_id=1, user_id=42, block_id="waiter")
+    await database.record_activity(42)  # юзер успел что-то нажать, пока шаг ждал
+    await process_due_steps(bot)
+
+    bot.send_message.assert_not_awaited()
+
+
+async def test_always_delay_ignores_activity(bot, scenario):
+    await _ensure_user()
+    await render_block(bot, chat_id=1, user_id=42, block_id="fork_always")
+    await database.record_activity(42)
+    await process_due_steps(bot)
+
+    assert bot.send_message.call_args[0][1] == "Привет!"
+
+
+async def test_step_survives_restart_and_is_not_sent_twice(bot, scenario):
+    await _ensure_user()
+    await render_block(bot, chat_id=1, user_id=42, block_id="waiter")
+    # "перезапуск": память бота пуста, но шаг лежит в БД
+    state.LAST_BOT_MESSAGE.clear()
+    await process_due_steps(bot)
+    await process_due_steps(bot)
+
+    bot.send_message.assert_awaited_once()
+
+
+async def test_click_during_auto_next_pause_still_cancels_reminder(bot, scenario, monkeypatch):
+    # Юзер нажал кнопку в окне между показом блока и стартом паузы (auto_next
+    # ждёт AUTO_NEXT_DELAY) — напоминание всё равно должно отмениться.
+    await _ensure_user()
+    monkeypatch.setattr(scenario_engine, "AUTO_NEXT_DELAY_SECONDS", 0.05)
+    task = asyncio.create_task(render_block(bot, chat_id=1, user_id=42, block_id="fork"))
+    await asyncio.sleep(0.01)
+    await database.record_activity(42)
+    await task
+    await process_due_steps(bot)
+
+    texts = [c[0][1] for c in bot.send_message.call_args_list]
+    assert "Второе сообщение цепочки" not in texts
+    assert "Привет!" in texts  # always-пауза из той же развилки сработала
+
+
+async def test_failed_step_is_retried_then_given_up(bot, scenario, monkeypatch):
+    await _ensure_user()
+    scenario["blocks"]["broken"] = {"type": "delay", "seconds": 0, "next": "no_such_block"}
+    await render_block(bot, chat_id=1, user_id=42, block_id="broken")
+    await process_due_steps(bot)  # KeyError внутри — шаг не теряется
+    async with database.DB_POOL.acquire() as conn:
+        status = await conn.fetchval("SELECT status FROM scheduled_steps WHERE user_id = 42")
+    assert status == "pending"
+
+
+def test_build_keyboard_puts_buttons_per_row():
+    buttons = [{"text": "Да", "next": "a"}, {"text": "Нет", "next": "b"}, {"text": "Ещё", "next": "c"}]
+
+    assert [len(r) for r in build_keyboard(buttons).inline_keyboard] == [1, 1, 1]
+    assert [len(r) for r in build_keyboard(buttons, 2).inline_keyboard] == [2, 1]
+
+
+async def test_same_pending_step_is_not_scheduled_twice(bot, scenario):
+    await _ensure_user()
+    await render_block(bot, chat_id=1, user_id=42, block_id="waiter")
+    await render_block(bot, chat_id=1, user_id=42, block_id="waiter")  # повторное нажатие
+    await process_due_steps(bot)
+
+    bot.send_message.assert_awaited_once()
+
+
+async def test_consultation_lead_is_sent_only_after_message_delivered(bot, scenario, monkeypatch):
+    notify, bitrix = AsyncMock(), AsyncMock()
+    monkeypatch.setattr(scenario_engine, "notify_consultation_lead", notify)
+    monkeypatch.setattr(scenario_engine, "send_lead_to_bitrix", bitrix)
+    monkeypatch.setattr(scenario_engine, "set_tag_by_name", AsyncMock())
+    scenario["blocks"][scenario_engine.CONSULTATION_DONE_BLOCK] = {"type": "message", "text": "Спасибо", "buttons": []}
+
+    await render_block(bot, chat_id=1, user_id=42, block_id=scenario_engine.CONSULTATION_DONE_BLOCK, replace=False)
+    await let_background_tasks_run()
+    notify.assert_awaited_once()
+    bitrix.assert_awaited_once()
+
+    # доставка не удалась — заявка не создаётся
+    notify.reset_mock()
+    bitrix.reset_mock()
+    bot.send_message.side_effect = TelegramBadRequest(method=AsyncMock(), message="boom")
+    with pytest.raises(TelegramBadRequest):
+        await render_block(bot, chat_id=1, user_id=42, block_id=scenario_engine.CONSULTATION_DONE_BLOCK, replace=False)
+    notify.assert_not_awaited()
+    bitrix.assert_not_awaited()

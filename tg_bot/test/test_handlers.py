@@ -120,7 +120,7 @@ async def test_fallback_text_handler_accepts_valid_phone_and_normalizes_it(bot, 
 
     await handlers.fallback_text_handler(message, bot)
 
-    assert state.USER_DATA[5]["phone"] == "+79991234567"
-    save_user_field.assert_awaited_once_with(5, "phone", "+79991234567")
+    assert state.USER_DATA[5]["phone"] == "89991234567"
+    save_user_field.assert_awaited_once_with(5, "phone", "89991234567")
     render_block.assert_awaited_once_with(bot, 6, 5, "consultation_contact", replace=False)
     assert 5 not in state.AWAITING_INPUT

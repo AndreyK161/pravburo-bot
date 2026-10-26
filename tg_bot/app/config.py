@@ -2,11 +2,18 @@ from os import getenv
 from pathlib import Path
 
 from dotenv import load_dotenv
+from zoneinfo import ZoneInfo
 
 load_dotenv()
 
 TOKEN = getenv("BOT_TOKEN")
 DATABASE_URL = getenv("DATABASE_URL")
+
+# Обычные напоминания отправляются только в этом окне по московскому времени.
+# Безусловные шаги (always=true: кружки, истории и т.п.) ограничение не получают.
+REMINDER_TIMEZONE = ZoneInfo(getenv("REMINDER_TIMEZONE", "Europe/Moscow"))
+REMINDER_START_HOUR = 9
+REMINDER_END_HOUR = 21
 
 BASE_DIR = Path(__file__).parent.parent.parent  # bot_pravburo/tg_bot/app -> bot_pravburo
 DATA_DIR = BASE_DIR / "data"
@@ -18,7 +25,7 @@ SCENARIO_PATH = DATA_DIR / "scenario.json"
 NEVER_REPLACE_BLOCK = "general_menu"
 
 # Пауза перед автопереходом (auto_next), чтобы сообщения цепочки не сыпались разом.
-AUTO_NEXT_DELAY_SECONDS = 1.5
+AUTO_NEXT_DELAY_SECONDS = 2.5
 
 # Файлы с такими расширениями шлём как фото (send_photo), а не как документ —
 # тогда в чате показывается превью картинки, а не иконка файла.

@@ -16,9 +16,13 @@ router = APIRouter(prefix="/api/scenario-graph", tags=["scenario-graph"])
 TYPE_LABELS = {
     "message": "Сообщение",
     "document": "Документ",
+    "video_note": "Кружок",
+    "video": "Видео",
     "input": "Запрос данных",
+    "referral_input": "Приём реферального контакта",
     "condition": "Проверка подписки",
     "delay": "Пауза",
+    "quiz_result": "Итог теста",
 }
 
 AUTO_TAGS = {
@@ -76,14 +80,23 @@ async def get_scenario_graph(platform: str = DEFAULT_SCENARIO_PLATFORM):
             }
         )
 
-        if block_type == "condition":
+        if block_type == "quiz_result":
+            low = 0
+            for r in block["ranges"]:
+                edges.append({"from": block_id, "to": r["next"], "label": f"{low}-{r['max']} б."})
+                low = r["max"] + 1
+            edges.append({"from": block_id, "to": block["default"], "label": "остальные"})
+        elif block_type == "condition":
             edges.append({"from": block_id, "to": block["yes"], "label": "подписан"})
             edges.append({"from": block_id, "to": block["no"], "label": "не подписан"})
         else:
+            if block.get("failure"):
+                edges.append({"from": block_id, "to": block["failure"], "label": "две ошибки ввода"})
             if block.get("next"):
                 edges.append({"from": block_id, "to": block["next"], "label": None})
-            if block.get("auto_next"):
-                edges.append({"from": block_id, "to": block["auto_next"], "label": "автоматически"})
+            auto_next = block.get("auto_next")
+            for target in (auto_next if isinstance(auto_next, list) else [auto_next] if auto_next else []):
+                edges.append({"from": block_id, "to": target, "label": "автоматически"})
             for button in block.get("buttons", []):
                 target = button_next(button)
                 if target:
