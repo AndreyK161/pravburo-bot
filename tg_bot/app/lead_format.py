@@ -61,6 +61,7 @@ def format_lead_comment(platform: str, user_id: int, lead: dict, scenario: dict 
     contact = f"@{lead['username']}" if lead.get("username") else f"id{user_id}"
     parts = [
         f"Платформа: {platform}",
+        f"Имя: {lead.get('name') or '—'}",
         f"Контакт: {contact}",
         f"Telegram ID: {user_id}",
         f"Start-параметр: {lead.get('source') or '—'}",

@@ -221,6 +221,8 @@ async def _render_block(
             "next": block["next"],
             "validate": block.get("validate"),
         }
+        if block.get("collect_name"):
+            AWAITING_INPUT[user_id]["collect_name"] = True
         return
 
     elif block["type"] == "video":

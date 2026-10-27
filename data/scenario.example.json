@@ -1025,7 +1025,8 @@
     "consultation_add_phone": {
       "type": "input",
       "lead_service": "consultation",
-      "text": "Напишите номер телефона в ответном сообщении",
+      "text": "Напишите ваше имя и номер телефона одним сообщением.\nНапример: Сергей, +7 900 123-45-67.\nМожно отправить имя и номер отдельно.",
+      "collect_name": true,
       "save_as": "phone",
       "validate": "phone",
       "next": "consultation_contact",
@@ -1664,7 +1665,8 @@
     "bailiffs_mfc_phone": {
       "type": "input",
       "lead_service": "mfc",
-      "text": "Напишите номер телефона в ответном сообщении",
+      "text": "Напишите ваше имя и номер телефона одним сообщением.\nНапример: Сергей, +7 900 123-45-67.\nМожно отправить имя и номер отдельно.",
+      "collect_name": true,
       "save_as": "phone",
       "validate": "phone",
       "next": "consultation_contact",

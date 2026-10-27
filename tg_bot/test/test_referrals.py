@@ -53,6 +53,7 @@ class ReferralFlowTests(unittest.IsolatedAsyncioTestCase):
             patch.object(handlers, "save_referral_contact", AsyncMock(return_value={"id": 1})),
             patch.object(handlers, "render_block", AsyncMock()),
             patch.object(handlers, "save_user_field", AsyncMock()),
+            patch.object(handlers, "get_consultation_lead", AsyncMock(return_value=None)),
             patch.object(handlers, "send_referral_to_bitrix", AsyncMock()),
             # Close mocked coroutine without launching a background task.
             patch.object(handlers, "run_in_background", side_effect=lambda coro: coro.close()),
@@ -91,6 +92,12 @@ class ReferralFlowTests(unittest.IsolatedAsyncioTestCase):
         self.message.text = "Сергей 89001234567"
         await handlers.fallback_text_handler(self.message, self.bot)
         handlers.save_referral_contact.assert_awaited_once()
+
+    async def test_partner_uses_saved_own_name(self):
+        handlers.get_consultation_lead.return_value = {"name": "Иван Петров"}
+        await handlers.fallback_text_handler(self.message, self.bot)
+        handlers.save_referral_contact.assert_awaited_once_with(
+            7, "Иван Петров", "ivan", "Сергей", "89001234567", 7, 101)
 
     async def test_input_reentry_resets_attempts(self):
         with patch.object(scenario_engine, "update_current_stage", AsyncMock()), \

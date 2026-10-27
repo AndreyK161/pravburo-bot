@@ -11,13 +11,15 @@ from database import (
     record_activity,
     save_quiz_answer,
     save_user_field,
+    save_user_contact,
+    get_consultation_lead,
     save_referral_contact,
     set_tag_by_name_if_untagged,
     upsert_user,
 )
 from scenario_engine import SCENARIO, gate_next_block, render_block, run_in_background
 from state import AWAITING_INPUT, LAST_BOT_MESSAGE, PENDING_DEEPLINK, USER_DATA, touch
-from validators import VALIDATORS, parse_referral_contact
+from validators import VALIDATORS, parse_contact, parse_referral_contact, validate_name
 
 dp = Dispatcher()
 
@@ -192,15 +194,54 @@ async def fallback_text_handler(message: Message, bot: Bot) -> None:
                     parse_mode="HTML",
                 )
             return
+        partner = await get_consultation_lead(user_id)
         referral = await save_referral_contact(
             user_id,
-            getattr(message.from_user, "full_name", None) or message.from_user.username or str(user_id),
+            (partner or {}).get("name") or getattr(message.from_user, "full_name", None) or message.from_user.username or str(user_id),
             message.from_user.username,
             contact[0], contact[1], message.chat.id, message.message_id,
         )
         AWAITING_INPUT.pop(user_id, None)
         await render_block(bot, message.chat.id, user_id, pending["next"], replace=False)
         run_in_background(send_referral_to_bitrix(referral))
+        return
+
+    if pending and pending.get("collect_name"):
+        # Принимаем имя и телефон вместе, либо собираем их в любом порядке.
+        # Пока нет обоих значений, не сохраняем неполную заявку и не создаём лид.
+        contact = parse_contact(message.text)
+        if contact is not None:
+            name, phone = contact
+            pending["phone"] = phone
+            if name:
+                pending["name"] = name
+        else:
+            name = validate_name(message.text)
+            if name:
+                pending["name"] = name
+            else:
+                prompt = (
+                    "Напишите, пожалуйста, ваше имя без номера. Например: Сергей."
+                    if pending.get("phone") else
+                    "Не удалось распознать контакт. Пришлите имя и один номер телефона, "
+                    "например: Сергей, +7 900 123-45-67."
+                )
+                await bot.send_message(message.chat.id, prompt)
+                return
+        if not pending.get("phone"):
+            await bot.send_message(
+                message.chat.id,
+                "Спасибо! Теперь напишите номер телефона. Например: +7 900 123-45-67.",
+            )
+            return
+        if not pending.get("name"):
+            await bot.send_message(message.chat.id, "Спасибо! Как к вам обращаться? Напишите ваше имя.")
+            return
+        await save_user_contact(user_id, pending["name"], pending["phone"])
+        USER_DATA.setdefault(user_id, {}).update(name=pending["name"], phone=pending["phone"])
+        next_block_id = await gate_next_block(bot, user_id, pending["next"])
+        AWAITING_INPUT.pop(user_id, None)
+        await render_block(bot, message.chat.id, user_id, next_block_id, replace=False)
         return
 
     if pending:

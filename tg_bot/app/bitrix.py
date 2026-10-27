@@ -54,8 +54,9 @@ async def send_referral_to_bitrix(referral: dict) -> None:
 
 
 def _build_lead_fields(platform: str, user_id: int, lead: dict) -> dict:
-    # Имя в карточке — Telegram-username (других имён бот сейчас не собирает).
-    name = f"@{lead['username']}" if lead.get("username") else f"id{user_id}"
+    # Приоритет у имени, которое человек сам указал; username — запасной вариант
+    # для старых записей и отдельный контакт в комментарии.
+    name = lead.get("name") or (f"@{lead['username']}" if lead.get("username") else f"id{user_id}")
     fields = {
         "TITLE": f"Заявка на консультацию ({platform})",
         "NAME": name,

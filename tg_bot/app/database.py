@@ -82,6 +82,15 @@ async def save_user_field(user_id: int, field: str, value: str) -> None:
         await conn.execute(f"UPDATE tg_users SET {field} = $1, updated_at = now() WHERE user_id = $2", value, user_id)
 
 
+async def save_user_contact(user_id: int, name: str, phone: str) -> None:
+    """Имя и номер самого заявителя сохраняются вместе, до создания лида."""
+    async with DB_POOL.acquire() as conn:
+        await conn.execute(
+            "UPDATE tg_users SET name = $2, phone = $3, updated_at = now() WHERE user_id = $1",
+            user_id, name, phone,
+        )
+
+
 async def save_quiz_answer(user_id: int, question: str, score: int) -> None:
     # Ответ на вопрос квиза: перезаписывает прошлый ответ на тот же вопрос
     # (при перепрохождении), остальные не трогает.
