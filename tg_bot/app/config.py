@@ -8,6 +8,7 @@ load_dotenv()
 
 TOKEN = getenv("BOT_TOKEN")
 DATABASE_URL = getenv("DATABASE_URL")
+MEDIA_UPLOAD_TIMEOUT_SECONDS = 300
 
 # Обычные напоминания отправляются только в этом окне по московскому времени.
 # Безусловные шаги (always=true: кружки, истории и т.п.) ограничение не получают.
@@ -43,9 +44,8 @@ CONSULTATION_DONE_BLOCK = "consultation_contact"
 TAG_CONSULTATION_STARTED = "Консультация: нет"
 TAG_CONSULTATION_DONE = "Консультация: да"
 
-# Блок согласия на обработку перс. данных — показывается один раз (после
-# проверки подписки, до general_menu/цели диплинка), пока юзер не нажмёт
-# кнопку "Даю согласие" в нём (см. consent_given_at в БД).
+# Блок согласия. Новый сценарий задаёт consent_version; подтверждение хранится
+# в bot_consents отдельно для пользователя, bot_id и версии сценария.
 CONSENT_BLOCK = "consent"
 
 # Чаты, куда шлём уведомление о новой заявке (человек дошёл до CONSULTATION_DONE_BLOCK,

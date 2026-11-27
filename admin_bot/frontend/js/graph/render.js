@@ -6,6 +6,10 @@ export const TYPE_COLORS = {
   input: "#d97706",
   condition: "#dc2626",
   delay: "#6b7280",
+  video: "#0891b2",
+  video_note: "#0891b2",
+  quiz_result: "#ca8a04",
+  referral_input: "#d97706",
 };
 
 export function renderLegend(graphData) {
@@ -15,7 +19,7 @@ export function renderLegend(graphData) {
       ([type, color]) => `
       <span class="inline-flex items-center gap-1.5">
         <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${color}"></span>
-        ${escapeHtml(typeLabelByType(graphData, type))}
+      ${escapeHtml(typeLabelByType(graphData, type))}
       </span>`
     )
     .join("");
@@ -32,7 +36,8 @@ export function renderLegend(graphData) {
 
 function typeLabelByType(graphData, type) {
   const node = graphData.nodes.find((n) => n.type === type);
-  return node ? node.type_label : type;
+  const labels = { message: "Сообщение", document: "Файл", input: "Ввод данных", condition: "Подписка", delay: "Пауза", video: "Видео", video_note: "Кружок", quiz_result: "Результат теста", referral_input: "Контакт знакомого" };
+  return node ? node.type_label : labels[type] ?? type;
 }
 
 function wrapLabel(text, maxLineLength = 16) {
@@ -55,33 +60,53 @@ function wrapLabel(text, maxLineLength = 16) {
 export function nodeDataset(graphData, savedPositions) {
   return graphData.nodes.map((n) => ({
     id: n.id,
-    label: wrapLabel(n.label),
-    shape: "dot",
-    size: n.is_start ? 22 : 14,
+    label: wrapLabel(n.label.replace(/^Ветка \d+:\s*/, ""), 28),
+    title: escapeHtml(n.label),
+    shape: "box",
+    widthConstraint: { minimum: 225, maximum: 225 },
+    heightConstraint: { minimum: 66 },
     color: {
-      background: TYPE_COLORS[n.type] ?? "#6b7280",
+      background: n.boundary ? "#eff6ff" : "#ffffff",
       border: n.is_start ? "#16a34a" : TYPE_COLORS[n.type] ?? "#6b7280",
     },
-    borderWidth: n.is_start ? 3 : 1,
-    font: { size: 12, color: "#1f2937", multi: false, vadjust: 0 },
-    margin: 8,
+    borderWidth: n.is_start ? 3 : 2,
+    shapeProperties: { borderRadius: 10, borderDashes: n.boundary },
+    font: { size: 14, color: "#1f2937", multi: false, vadjust: 0 },
+    margin: 16,
     ...(savedPositions?.[n.id] ?? {}),
   }));
 }
 
-export function edgeDataset(graphData) {
-  return graphData.edges.map((e) => ({
-    from: e.from,
-    to: e.to,
-    label: e.label ?? "",
-    arrows: "to",
+export function edgeDataset(graphData, positions = {}) {
+  return graphData.edges.flatMap((e, index) => {
+    const points = Object.keys(positions)
+      .filter((id) => id.startsWith(`__route_${index}_`))
+      .sort((a, b) => positions[a].x - positions[b].x);
+    const path = [e.from, ...points, e.to];
+    return path.slice(1).map((target, segment) => ({
+    id: `edge_${index}_${segment}`,
+    sourceNode: e.from,
+    targetNode: e.to,
+    from: path[segment],
+    to: target,
+    label: segment > 0 || e.label === "автоматически" ? "" : wrapLabel(e.label ?? "", 24),
+    arrows: segment === path.length - 2 ? "to" : "",
     font: { size: 10, color: "#6b7280", strokeWidth: 8, strokeColor: "#ffffff", align: "top" },
-    color: { color: "#cbd5e1", highlight: "#94a3b8" },
-    smooth: { type: "continuous" },
+    width: 1.5,
+    color: { color: "#94a3b8", highlight: "#2563eb", hover: "#2563eb" },
+    smooth: { enabled: true, type: "cubicBezier", forceDirection: "horizontal", roundness: 0.35 },
+    }));
+  });
+}
+
+export function routingNodes(positions) {
+  return Object.entries(positions).filter(([id]) => id.startsWith("__route_")).map(([id, position]) => ({
+    id, ...position, label: "", shape: "dot", size: 0.1,
+    borderWidth: 0, color: "rgba(0,0,0,0)", chosen: false,
   }));
 }
 
-export function renderDetail(network, graphData, nodeId) {
+export function renderDetail(network, graphData, nodeId, onNavigate) {
   const node = graphData.nodes.find((n) => n.id === nodeId);
   if (!node) return;
 
@@ -115,7 +140,7 @@ export function renderDetail(network, graphData, nodeId) {
                   (b) =>
                     `<li class="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                       <span class="break-words min-w-0">${escapeHtml(b.text)}</span>
-                      <button class="graph-jump text-blue-600 hover:underline text-xs break-words text-right" data-target="${b.next}">→ ${escapeHtml(labelOf(b.next))}</button>
+                      ${b.next ? `<button class="graph-jump text-blue-600 hover:underline text-xs break-words text-right" data-target="${escapeHtml(b.next)}">→ ${escapeHtml(labelOf(b.next))}</button>` : '<span class="text-xs text-gray-400">Внешняя ссылка / согласие</span>'}
                     </li>`
                 )
                 .join("")}
@@ -165,6 +190,10 @@ export function renderDetail(network, graphData, nodeId) {
   content.querySelectorAll(".graph-jump").forEach((btn) => {
     btn.addEventListener("click", () => {
       const targetId = btn.dataset.target;
+      if (onNavigate) {
+        onNavigate(targetId);
+        return;
+      }
       network.selectNodes([targetId]);
       network.focus(targetId, { scale: 1, animation: { duration: 400, easingFunction: "easeInOutQuad" } });
       renderDetail(network, graphData, targetId);

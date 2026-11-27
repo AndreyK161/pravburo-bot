@@ -1,9 +1,7 @@
 import { showToast } from "../toast.js";
-import { fetchSavedPositions, savePositions } from "./api.js";
-import { renderLegend, nodeDataset, edgeDataset, renderDetail } from "./render.js";
-import { setupIdleJiggle } from "./idle-jiggle.js";
-import { setupFling } from "./fling.js";
+import { renderLegend, nodeDataset, edgeDataset, renderDetail, routingNodes } from "./render.js";
 import { setupTrackpadPanning } from "./trackpad-panning.js";
+import { GRAPH_SECTIONS, sectionOf, sectionGraph, layoutPositions } from "./layout.js";
 import {
   getScenarioPlatform,
   loadScenarioPlatforms,
@@ -12,21 +10,73 @@ import {
 } from "../scenario-platform.js";
 
 let network = null;
-let idleJiggle = null;
-let graphTabVisible = false;
+let graphData = null;
+let currentSection = "entry";
 let loadedPlatform = null;
 let platformsInitialized = false;
+let removePanning = null;
+let edges = null;
+const sectionPositions = new Map();
 
 export function setGraphTabVisible(visible) {
-  graphTabVisible = visible;
-  idleJiggle?.setTabVisible(visible);
+  if (visible) network?.redraw();
 }
 
-// Плюс сворачивание/переключение вкладки браузера — requestAnimationFrame и
-// так сам притормаживает в фоне, но на всякий случай.
-document.addEventListener("visibilitychange", () => {
-  idleJiggle?.setTabVisible(graphTabVisible && !document.hidden);
-});
+function navigateTo(nodeId) {
+  const node = graphData.nodes.find((n) => n.id === nodeId);
+  if (!node) return;
+  const section = sectionOf(node);
+  if (section !== currentSection) drawSection(section);
+  network.selectNodes([nodeId]);
+  network.selectEdges(edges.get().filter((edge) => edge.sourceNode === nodeId || edge.targetNode === nodeId).map((edge) => edge.id));
+  network.focus(nodeId, { scale: 0.9, animation: { duration: 250 } });
+  renderDetail(network, graphData, nodeId, navigateTo);
+}
+
+function drawSection(section, reset = false) {
+  if (network) {
+    sectionPositions.set(currentSection, network.getPositions());
+    removePanning?.();
+    network.destroy();
+  }
+  currentSection = section;
+  if (reset) sectionPositions.delete(section);
+  const visible = sectionGraph(graphData, section);
+  const positions = sectionPositions.get(section) ?? layoutPositions(visible);
+  const container = document.getElementById("scenarioGraph");
+  edges = new vis.DataSet(edgeDataset(visible, positions));
+  network = new vis.Network(container, {
+    nodes: new vis.DataSet([...nodeDataset(visible, positions), ...routingNodes(positions)]),
+    edges,
+  }, {
+    physics: false,
+    layout: { improvedLayout: false },
+    interaction: { hover: true, tooltipDelay: 250, dragNodes: true, dragView: true },
+    nodes: { shadow: false },
+    edges: { shadow: false, selectionWidth: 2 },
+  });
+  renderLegend(visible);
+  document.getElementById("graphDetailContent").classList.add("hidden");
+  document.getElementById("graphDetailEmpty").classList.remove("hidden");
+  document.querySelectorAll("[data-graph-section]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.graphSection === section);
+    button.setAttribute("aria-pressed", String(button.dataset.graphSection === section));
+  });
+  document.getElementById("graphSectionHint").textContent =
+    "Сценарий идёт слева направо. Прокрутка перемещает схему, Ctrl + прокрутка меняет масштаб. Пунктирная карточка открывает другой раздел.";
+  const first = visible.nodes.find((n) => n.is_start) ?? visible.nodes.find((n) => !n.boundary);
+  network.once("afterDrawing", () => {
+    if (visible.nodes.length <= 10) {
+      network.fit({ maxZoomLevel: 0.9, animation: false });
+    } else if (first) {
+      network.moveTo({ position: { x: positions[first.id].x + 230, y: positions[first.id].y + 100 }, scale: 0.85 });
+    }
+  });
+  network.on("click", ({ nodes }) => {
+    if (nodes.length) navigateTo(nodes[0]);
+  });
+  removePanning = setupTrackpadPanning(network, container);
+}
 
 export async function loadGraph() {
   if (!platformsInitialized) {
@@ -34,115 +84,33 @@ export async function loadGraph() {
     await loadScenarioPlatforms();
     renderPlatformSwitcher(document.getElementById("graphPlatformSwitcher"));
     onScenarioPlatformChange(() => loadGraph());
+    document.getElementById("graphFit").onclick = () => network?.fit({ maxZoomLevel: 1, animation: true });
+    document.getElementById("graphReset").onclick = () => drawSection(currentSection, true);
+    document.getElementById("graphZoomIn").onclick = () => network?.moveTo({ scale: Math.min(1.8, network.getScale() * 1.25) });
+    document.getElementById("graphZoomOut").onclick = () => network?.moveTo({ scale: Math.max(0.08, network.getScale() / 1.25) });
   }
-
   const platform = getScenarioPlatform();
-  if (network && loadedPlatform === platform) return; // граф уже построен и живёт своей физикой
-
-  if (network) {
-    idleJiggle?.pause();
-    network.destroy();
-    network = null;
-    idleJiggle = null;
-    document.getElementById("graphDetailContent").classList.add("hidden");
-    document.getElementById("graphDetailEmpty").classList.remove("hidden");
-  }
-
-  let graphData;
+  if (network && loadedPlatform === platform) return;
   try {
-    const res = await fetch(`/api/scenario-graph?platform=${encodeURIComponent(platform)}`);
-    if (!res.ok) throw new Error("Failed to fetch scenario graph");
-    graphData = await res.json();
+    const response = await fetch(`/api/scenario-graph?platform=${encodeURIComponent(platform)}`);
+    if (!response.ok) throw new Error("Failed to fetch scenario graph");
+    graphData = await response.json();
   } catch {
     showToast("Не удалось загрузить граф сценария");
     return;
   }
-
-  renderLegend(graphData);
-
-  const nodeIds = graphData.nodes.map((n) => n.id);
-  const savedPositions = await fetchSavedPositions(nodeIds, platform);
-
-  const container = document.getElementById("scenarioGraph");
-  const data = {
-    nodes: new vis.DataSet(nodeDataset(graphData, savedPositions)),
-    edges: new vis.DataSet(edgeDataset(graphData)),
-  };
-  const options = {
-    physics: {
-      solver: "barnesHut",
-      barnesHut: {
-        gravitationalConstant: -2200,
-        centralGravity: 0.15,
-        springLength: 220,
-        springConstant: 0.02,
-        damping: 0.7,
-        avoidOverlap: 0.7,
-      },
-      minVelocity: 0.75,
-      adaptiveTimestep: true,
-      stabilization: savedPositions ? false : { iterations: 250 },
-    },
-    interaction: { hover: true, tooltipDelay: 200, dragNodes: true, dragView: true },
-    nodes: { shadow: false },
-    edges: { shadow: false },
-  };
-
-  network = new vis.Network(container, data, options);
-  loadedPlatform = platform;
-
-  graphTabVisible = true;
-  idleJiggle = setupIdleJiggle(network);
-
-  let interactionActive = false;
-  let resumeTimer = null;
-  const scheduleResume = () => {
-    clearTimeout(resumeTimer);
-    resumeTimer = setTimeout(() => {
-      if (interactionActive) return;
-      idleJiggle?.setAnchors(network.getPositions());
-      idleJiggle?.resume();
-    }, 400);
-  };
-
-  if (savedPositions) {
-    idleJiggle?.setAnchors(savedPositions);
-  } else {
-    network.once("stabilizationIterationsDone", () => {
-      const positions = network.getPositions();
-      idleJiggle?.setAnchors(positions);
-      savePositions(positions, platform);
-    });
+  sectionPositions.clear();
+  const sections = document.getElementById("graphSections");
+  sections.replaceChildren();
+  for (const section of GRAPH_SECTIONS) {
+    if (!graphData.nodes.some((n) => sectionOf(n) === section.id)) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.graphSection = section.id;
+    button.textContent = section.label;
+    button.onclick = () => drawSection(section.id);
+    sections.append(button);
   }
-
-  const fling = setupFling(network, () => {
-    interactionActive = false;
-    scheduleResume();
-  });
-
-  network.on("dragStart", () => {
-    interactionActive = true;
-    clearTimeout(resumeTimer);
-    idleJiggle?.pause();
-    fling.trackReset();
-  });
-  network.on("dragging", (params) => fling.trackSample(params.nodes[0]));
-  network.on("dragEnd", (params) => {
-    const nodeId = params.nodes[0];
-    if (nodeId && fling.tryStart(nodeId)) return; // бросили резко — доиграет сама, дальше вызовет resume
-    interactionActive = false;
-    scheduleResume();
-  });
-
-  network.on("click", (params) => {
-    if (!params.nodes.length) return;
-    const nodeId = params.nodes[0];
-    renderDetail(network, graphData, nodeId);
-    network.focus(nodeId, {
-      scale: Math.max(network.getScale(), 1),
-      animation: { duration: 400, easingFunction: "easeInOutQuad" },
-    });
-  });
-
-  setupTrackpadPanning(network, container);
+  loadedPlatform = platform;
+  drawSection("entry");
 }

@@ -1,5 +1,7 @@
 """Текст заявки на консультацию — один формат и для карточки в Битрикс, и для уведомления в чат."""
 import json
+import re
+from html import unescape
 
 from config import SCENARIO_PATH
 
@@ -10,6 +12,12 @@ QUIZ_BRANCH_LABELS = {
     "c": "Ветка 2: коллекторы",
     "b": "Ветка 3: приставы",
 }
+LEAD_BRANCH_LABELS = {
+    1: QUIZ_BRANCH_LABELS["q"],
+    2: QUIZ_BRANCH_LABELS["c"],
+    3: QUIZ_BRANCH_LABELS["b"],
+}
+INTERNAL_ANSWERS = {"route_income", "service_mfc", "lead_branch"}
 
 
 def load_scenario() -> dict:
@@ -28,7 +36,8 @@ def format_source(source: str | None, utm_source: str | None, utm_campaign: str 
 def format_quiz_branch(answers: dict) -> str:
     if answers.get("service_mfc") == 1:
         return QUIZ_BRANCH_LABELS["b"]
-    labels = [label for prefix, label in QUIZ_BRANCH_LABELS.items() if any(k.startswith(prefix) for k in answers)]
+    labels = [label for prefix, label in QUIZ_BRANCH_LABELS.items()
+              if any(re.fullmatch(rf"{prefix}\d+", key) for key in answers)]
     return "; ".join(labels) if labels else "квиз не проходил"
 
 
@@ -37,15 +46,17 @@ def format_quiz_answers(answers: dict, scenario: dict) -> list[str]:
 
     Ответ ищется по сценарию: кнопка, у которой quiz_question и quiz_score совпали
     с сохранёнными. Если сценарий потом поменяли и совпадения нет, пишем баллы."""
-    # Служебный выбор дохода нужен только для маршрутизации сценария, не для CRM.
-    answers = {key: value for key, value in answers.items() if key not in {"route_income", "service_mfc"}}
+    answers = {key: value for key, value in answers.items() if key not in INTERNAL_ANSWERS}
     lines = []
     seen = set()
     for block in scenario["blocks"].values():
         for button in block.get("buttons", []):
             question = button.get("quiz_question")
             if question in answers and question not in seen and button.get("quiz_score") == answers[question]:
-                lines.append((question, f"{block['text']} — {button['text']}"))
+                question_text = block["text"]
+                if block.get("html"):
+                    question_text = unescape(re.sub(r"<[^>]+>", "", question_text))
+                lines.append((question, f"{question_text} — {button['text']}"))
                 seen.add(question)
                 break
     known = {q for q, _ in lines}
@@ -58,6 +69,9 @@ def format_lead_comment(platform: str, user_id: int, lead: dict, scenario: dict 
     answers = lead.get("quiz_answers") or {}
     if isinstance(answers, str):
         answers = json.loads(answers)
+    branch = LEAD_BRANCH_LABELS.get(answers.get("lead_branch"))
+    if answers.get("service_mfc") == 1:
+        branch = QUIZ_BRANCH_LABELS["b"]
     contact = f"@{lead['username']}" if lead.get("username") else f"id{user_id}"
     parts = [
         f"Платформа: {platform}",
@@ -66,6 +80,7 @@ def format_lead_comment(platform: str, user_id: int, lead: dict, scenario: dict 
         f"Telegram ID: {user_id}",
         f"Start-параметр: {lead.get('source') or '—'}",
         f"Источник: {format_source(lead.get('source'), lead.get('utm_source'), lead.get('utm_campaign'))}",
+        *([f"Ветка заявки: {branch}"] if branch else []),
         f"Ветка квиза: {format_quiz_branch(answers)}",
     ]
     if answers.get("service_mfc") == 1:
@@ -74,7 +89,18 @@ def format_lead_comment(platform: str, user_id: int, lead: dict, scenario: dict 
         parts.append(f"Ссылка на пользователя: https://t.me/{lead['username']}")
     elif platform == "Telegram":
         parts.append("Ссылка на пользователя: недоступна — username не указан; используйте телефон")
-    answer_lines = format_quiz_answers(answers, scenario)
-    if answer_lines:
-        parts.append("Ответы:\n" + "\n".join(f"{i}. {line}" for i, line in enumerate(answer_lines, 1)))
+    quiz_groups = {prefix: {} for prefix in QUIZ_BRANCH_LABELS}
+    other_answers = {}
+    for key, value in answers.items():
+        if key in INTERNAL_ANSWERS:
+            continue
+        group = quiz_groups.get(key[0]) if re.fullmatch(r"[qcb]\d+", key) else None
+        (group if group is not None else other_answers)[key] = value
+    answered_groups = [(QUIZ_BRANCH_LABELS[prefix], group) for prefix, group in quiz_groups.items() if group]
+    if other_answers:
+        answered_groups.append(("Прочие ответы", other_answers))
+    for label, group in answered_groups:
+        heading = f"Ответы — {label}:" if len(answered_groups) > 1 else "Ответы:"
+        lines = format_quiz_answers(group, scenario)
+        parts.append(heading + "\n" + "\n".join(f"{i}. {line}" for i, line in enumerate(lines, 1)))
     return "\n".join(parts)

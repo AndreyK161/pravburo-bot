@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from aiogram import Bot
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramNetworkError
 from aiogram.types import FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from config import (
@@ -15,17 +15,25 @@ from config import (
     CONSULTATION_START_BLOCK,
     FILES_DIR,
     IMAGE_EXTENSIONS,
+    MEDIA_UPLOAD_TIMEOUT_SECONDS,
     NEVER_REPLACE_BLOCK,
     SCENARIO_PATH,
     TAG_CONSULTATION_DONE,
     TAG_CONSULTATION_STARTED,
 )
-from database import get_quiz_score, save_quiz_answer, schedule_step, set_blocked, set_tag_by_name, update_current_stage
+from database import get_quiz_score, save_quiz_answer, schedule_step, set_blocked, set_tag_by_name, update_current_stage, require_bot_consent
+from database import cancel_user_steps
 from bitrix import send_lead_to_bitrix
 from notify import notify_consultation_lead
 from state import AWAITING_INPUT, LAST_BOT_MESSAGE
 
 logger = logging.getLogger(__name__)
+
+LEAD_BRANCH_BY_ENTRY = {
+    "situation_hard": 1,
+    "situation_collectors": 2,
+    "situation_bailiffs": 3,
+}
 
 with open(SCENARIO_PATH, "r", encoding="utf-8") as f:
     SCENARIO = json.load(f)
@@ -79,6 +87,10 @@ def build_keyboard(buttons: list[dict], per_row: int = 1) -> InlineKeyboardMarku
 
 
 async def gate_next_block(bot: Bot, user_id: int, next_block_id: str) -> str:
+    version = SCENARIO.get("consent_version")
+    if version and next_block_id != CONSENT_BLOCK:
+        if await require_bot_consent(user_id, bot.id, version, next_block_id):
+            return CONSENT_BLOCK
     # Проверка подписки на канал сидит в самом первом блоке сценария (обычно
     # "condition"). Если юзер успел отписаться, любой клик по кнопке — хоть
     # новой, хоть старой из истории чата — должен возвращать его на эту
@@ -101,11 +113,16 @@ async def is_subscribed(bot: Bot, channel: str, user_id: int) -> bool:
     return member.status not in ("left", "kicked")
 
 
-async def send_file(bot: Bot, chat_id: int, file_path: Path) -> None:
-    if file_path.suffix.lower() in IMAGE_EXTENSIONS:
+async def send_file(
+    bot: Bot, chat_id: int, file_path: Path, display_filename: str | None = None, *, as_document: bool = False
+) -> None:
+    if not as_document and file_path.suffix.lower() in IMAGE_EXTENSIONS:
         await bot.send_photo(chat_id, FSInputFile(file_path))
     else:
-        await bot.send_document(chat_id, FSInputFile(file_path))
+        await bot.send_document(
+            chat_id, FSInputFile(file_path, filename=display_filename),
+            request_timeout=MEDIA_UPLOAD_TIMEOUT_SECONDS,
+        )
 
 
 async def send_file_with_caption(
@@ -113,11 +130,21 @@ async def send_file_with_caption(
     parse_mode: str | None = None,
 ) -> Message:
     if file_path.suffix.lower() in IMAGE_EXTENSIONS:
+        # Длинный текст не помещается в подпись фото (1024 символа).
+        # HTML не режем: фото и полный текст отправляем последовательно.
+        if len(caption.encode("utf-16-le")) // 2 > 1024:
+            await bot.send_photo(
+                chat_id, FSInputFile(file_path), request_timeout=MEDIA_UPLOAD_TIMEOUT_SECONDS
+            )
+            return await bot.send_message(
+                chat_id, caption, reply_markup=keyboard, parse_mode=parse_mode
+            )
         return await bot.send_photo(
             chat_id, FSInputFile(file_path), caption=caption, reply_markup=keyboard, parse_mode=parse_mode
         )
     return await bot.send_document(
-        chat_id, FSInputFile(file_path), caption=caption, reply_markup=keyboard, parse_mode=parse_mode
+        chat_id, FSInputFile(file_path), caption=caption, reply_markup=keyboard, parse_mode=parse_mode,
+        request_timeout=MEDIA_UPLOAD_TIMEOUT_SECONDS,
     )
 
 
@@ -188,6 +215,8 @@ async def _render_block(
         return
 
     await update_current_stage(user_id, block_id)
+    if block_id in LEAD_BRANCH_BY_ENTRY:
+        await save_quiz_answer(user_id, "lead_branch", LEAD_BRANCH_BY_ENTRY[block_id])
     if block.get("lead_service") in ("mfc", "consultation"):
         # Служебная метка услуги переживает перезапуск; не является ответом квиза.
         await save_quiz_answer(user_id, "service_mfc", int(block["lead_service"] == "mfc"))
@@ -228,7 +257,16 @@ async def _render_block(
     elif block["type"] == "video":
         # Обычная видеоинструкция, не Telegram-кружок.
         if (FILES_DIR / block["file"]).exists():
-            sent = await bot.send_video(chat_id, FSInputFile(FILES_DIR / block["file"]))
+            sent = await bot.send_video(
+                chat_id, FSInputFile(FILES_DIR / block["file"]),
+                caption=block.get("text") or None,
+                parse_mode=parse_mode,
+                reply_markup=keyboard,
+                supports_streaming=True,
+                width=block.get("width"),
+                height=block.get("height"),
+                request_timeout=MEDIA_UPLOAD_TIMEOUT_SECONDS,
+            )
             LAST_BOT_MESSAGE[user_id] = sent
         else:
             await show_text(bot, chat_id, user_id, f"[видео ещё не загружено в data/files: {block['file']}]", None, False)
@@ -241,6 +279,7 @@ async def _render_block(
                 chat_id,
                 FSInputFile(FILES_DIR / block["file"]),
                 reply_markup=keyboard,
+                request_timeout=MEDIA_UPLOAD_TIMEOUT_SECONDS,
             )
             LAST_BOT_MESSAGE[user_id] = sent
         else:
@@ -249,7 +288,8 @@ async def _render_block(
     elif block["type"] == "document":
         file_names = block["file"] if isinstance(block["file"], list) else [block["file"]]
         missing = [name for name in file_names if not (FILES_DIR / name).exists()]
-        single_image = len(file_names) == 1 and (FILES_DIR / file_names[0]).suffix.lower() in IMAGE_EXTENSIONS
+        as_document = block.get("send_as_document", False)
+        single_image = not as_document and len(file_names) == 1 and (FILES_DIR / file_names[0]).suffix.lower() in IMAGE_EXTENSIONS
         if missing:
             missing_list = ", ".join(missing)
             text = f"{block['text']}\n\n[файлы ещё не загружены в data/files: {missing_list}]"
@@ -260,11 +300,38 @@ async def _render_block(
             )
             LAST_BOT_MESSAGE[user_id] = sent
         else:
-            await show_text(bot, chat_id, user_id, block["text"], keyboard, should_replace, parse_mode)
+            if block.get("text"):
+                await show_text(bot, chat_id, user_id, block["text"], keyboard, should_replace, parse_mode)
             for name in file_names:
-                await send_file(bot, chat_id, FILES_DIR / name)
+                try:
+                    if as_document:
+                        display_filename = block.get("display_filename") if len(file_names) == 1 else None
+                        await send_file(bot, chat_id, FILES_DIR / name, display_filename, as_document=True)
+                    elif len(file_names) == 1 and block.get("display_filename"):
+                        await send_file(bot, chat_id, FILES_DIR / name, block["display_filename"])
+                    else:
+                        await send_file(bot, chat_id, FILES_DIR / name)
+                except TelegramNetworkError:
+                    logger.warning("Сбой загрузки файла %s в блоке %s", name, block_id)
+                    # Не повторяем POST автоматически после таймаута: Telegram
+                    # мог принять файл, но ответ потерялся. Повтор — по кнопке.
+                    sent = await bot.send_message(
+                        chat_id,
+                        "Не удалось завершить загрузку файла из-за сбоя связи с Telegram. "
+                        "Если файл не появился, нажмите «Повторить отправку».",
+                        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                            InlineKeyboardButton(
+                                text="Повторить отправку", callback_data=f"block:{block_id}"
+                            )
+                        ]]),
+                    )
+                    LAST_BOT_MESSAGE[user_id] = sent
+                    return  # Дальше по сценарию идём только после успешной отправки.
 
     if block_id == CONSULTATION_DONE_BLOCK:
+        fallback = SCENARIO["blocks"].get("advertising_mfc_main_delay")
+        if fallback:
+            await cancel_user_steps(user_id, next_block_id=fallback["next"])
         # Заявка оформляется только после того, как сообщение юзеру реально
         # доставлено (если отправка упала, мы сюда не дойдём), и не задерживает
         # цепочку: уведомление в чат и лид в Битрикс уходят параллельно.

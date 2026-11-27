@@ -55,6 +55,8 @@ async def get_scenario_graph(platform: str = DEFAULT_SCENARIO_PLATFORM):
         if "next" in button:
             return button["next"]
         if button.get("consent"):
+            if scenario.get("consent_version"):
+                return start_id
             # У кнопки согласия (CONSENT_BLOCK) нет фиксированного "next" в JSON —
             # следующий блок решает код бота (PENDING_DEEPLINK либо общее меню).
             # Для графа считаем целью то же, куда ведёт condition-блок при "подписан".

@@ -8,7 +8,7 @@ from vkbottle_types.events.bot_events import MessageEvent
 from antispam import AntiSpamMiddleware
 from config import TAG_CONSULTATION_STARTED, TOKEN
 from database import save_user_field, set_tag_by_name_if_untagged, upsert_user
-from scenario_engine import SCENARIO, build_keyboard, gate_next_block, render_block
+from scenario_engine import SCENARIO, THANK_YOU_PACKS, build_keyboard, gate_next_block, render_block
 from state import (
     AWAITING_INPUT,
     LAST_BOT_MESSAGE,
@@ -53,8 +53,15 @@ async def _handle_start(message: Message, start_payload: dict) -> None:
     user_id = message.from_id
     touch(user_id)
     AWAITING_INPUT.pop(user_id, None)
-    await _ensure_user(user_id, message.peer_id, start_payload.get("source"))
-    await render_block(bot.api, message.peer_id, user_id, SCENARIO["start"], replace=False)
+    source = start_payload.get("source")
+    target = SCENARIO["start"]
+    ref = getattr(message, "ref", None) or start_payload.get("ref")
+    if isinstance(ref, str) and ref in THANK_YOU_PACKS:
+        pack_block, pack_source = THANK_YOU_PACKS[ref]
+        if pack_block in SCENARIO["blocks"]:
+            target, source = pack_block, pack_source
+    await _ensure_user(user_id, message.peer_id, source)
+    await render_block(bot.api, message.peer_id, user_id, target, replace=False)
 
 
 async def _handle_fallback_text(message: Message) -> None:
@@ -113,7 +120,9 @@ async def message_new_handler(message: Message) -> None:
 
     async def dispatch(event: Message, data: dict) -> None:
         start_payload = _parse_start_payload(event.payload)
-        if start_payload is not None:
+        if getattr(event, "ref", None) in THANK_YOU_PACKS:
+            await _handle_start(event, start_payload or {})
+        elif start_payload is not None:
             await _handle_start(event, start_payload)
         elif (event.text or "").strip().lower() == "начать":
             # Кнопка "Начать" в настройках сообщества шлёт payload {"command":"start"},

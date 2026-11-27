@@ -22,6 +22,29 @@ async def close_db_pool() -> None:
         await DB_POOL.close()
 
 
+async def require_bot_consent(user_id: int, bot_id: int, version: str, target: str) -> bool:
+    """Save the destination; return whether this bot/version still needs consent."""
+    async with DB_POOL.acquire() as conn:
+        accepted_at = await conn.fetchval("""
+            INSERT INTO bot_consents (user_id, bot_id, version, pending_block)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (user_id, bot_id, version) DO UPDATE
+                SET pending_block = EXCLUDED.pending_block
+            RETURNING accepted_at
+        """, user_id, bot_id, version, target)
+    return accepted_at is None
+
+
+async def accept_bot_consent(user_id: int, bot_id: int, version: str) -> str | None:
+    """Persist confirmation once and recover the destination, even after restart."""
+    async with DB_POOL.acquire() as conn:
+        return await conn.fetchval("""
+            UPDATE bot_consents SET accepted_at = now()
+            WHERE user_id = $1 AND bot_id = $2 AND version = $3 AND accepted_at IS NULL
+            RETURNING pending_block
+        """, user_id, bot_id, version)
+
+
 async def save_referral_contact(
     partner_id: int, partner_name: str, partner_username: str | None,
     contact_name: str, contact_phone: str, chat_id: int, message_id: int,
@@ -246,10 +269,12 @@ async def defer_step_until(step_id: int, fire_at: datetime) -> None:
         )
 
 
-async def cancel_user_steps(user_id: int) -> None:
-    # /start начинает воронку заново — старые отложенные шаги юзера не нужны,
-    # иначе одни и те же сообщения придут дважды.
+async def cancel_user_steps(user_id: int, next_block_id: str | None = None) -> None:
+    # /start отменяет все шаги; завершённая консультация может отменить один переход.
     async with DB_POOL.acquire() as conn:
         await conn.execute(
-            "UPDATE scheduled_steps SET status = 'cancelled' WHERE user_id = $1 AND status = 'pending'", user_id
+            """UPDATE scheduled_steps SET status = 'cancelled'
+               WHERE user_id = $1 AND status = 'pending'
+                 AND ($2::text IS NULL OR next_block_id = $2)""",
+            user_id, next_block_id,
         )

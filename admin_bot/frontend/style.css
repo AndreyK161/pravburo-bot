@@ -160,3 +160,37 @@
     max-width: none;
   }
 }
+
+.graph-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.graph-sections, .graph-view-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.graph-toolbar button {
+  padding: 9px 12px;
+  border: 1px solid #dce1e8;
+  border-radius: 8px;
+  background: white;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+}
+.graph-toolbar button:hover { background: #f1f5f9; }
+.graph-sections button.is-active {
+  background: #15171c;
+  border-color: #15171c;
+  color: white;
+}
+#scenarioGraph {
+  background-color: #f8fafc;
+  background-image: radial-gradient(#dce3ed 1px, transparent 1px);
+  background-size: 20px 20px;
+  min-height: 520px;
+}

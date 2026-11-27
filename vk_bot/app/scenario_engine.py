@@ -1,6 +1,8 @@
 import asyncio
 import json
 import random
+import re
+from html import unescape
 from pathlib import Path
 
 from vkbottle import API, Callback, Keyboard
@@ -16,6 +18,7 @@ from config import (
     IMAGE_EXTENSIONS,
     NEVER_REPLACE_BLOCK,
     SCENARIO_PATH,
+    SHARED_SCENARIO_PATH,
     TAG_CONSULTATION_DONE,
     TAG_CONSULTATION_STARTED,
 )
@@ -27,6 +30,25 @@ from state import AWAITING_INPUT, LAST_BOT_MESSAGE, USER_ACTIVITY
 with open(SCENARIO_PATH, "r", encoding="utf-8") as f:
     SCENARIO = json.load(f)
 
+THANK_YOU_PACKS = {
+    "collectorspack_thankyoucollectors": ("advertising_collectors_materials", "thankyoucollectors"),
+    "mfcpack_thankyoumfc": ("advertising_mfc_materials", "thankyoumfc"),
+}
+shared_blocks = SCENARIO["blocks"]
+if SCENARIO_PATH != SHARED_SCENARIO_PATH:
+    with SHARED_SCENARIO_PATH.open(encoding="utf-8") as f:
+        shared_blocks = json.load(f)["blocks"]
+for block_id, _ in THANK_YOU_PACKS.values():
+    if block_id in shared_blocks:
+        block = shared_blocks[block_id]
+        caption = block["text"]
+        if block.get("html"):
+            caption = unescape(re.sub(r"<[^>]+>", "", caption))
+        SCENARIO["blocks"][block_id] = {
+            "type": "document", "file": block["file"], "text": caption,
+            "send_as_document": True,
+        }
+
 # VK messages.send кидает эти коды, когда пользователь запретил сообщения
 # сообщества (в чёрном списке / не разрешил личные сообщения) — аналог
 # TelegramForbiddenError в tg_bot, а не разовый сбой сети.
@@ -35,7 +57,7 @@ VK_BLOCKED_ERROR_CODES = {900, 901, 902}
 # Файлы сценария (data/files) статичны, поэтому загруженный в VK attachment
 # переиспользуем для всех юзеров, а не заливаем заново на каждый показ блока —
 # аналог кэша file_id в tg_bot, только на уровне процесса бота.
-_FILE_ATTACHMENT_CACHE: dict[Path, str] = {}
+_FILE_ATTACHMENT_CACHE: dict[tuple[Path, bool], str] = {}
 
 
 # VK ограничивает inline-клавиатуру 6 строками по 5 кнопок (иначе messages.send
@@ -105,20 +127,21 @@ async def is_subscribed(vk_api: API, condition_block: dict, user_id: int) -> boo
         return False
 
 
-async def _upload_file_attachment(vk_api: API, peer_id: int, file_path: Path) -> str:
-    cached = _FILE_ATTACHMENT_CACHE.get(file_path)
+async def _upload_file_attachment(vk_api: API, peer_id: int, file_path: Path, *, as_document: bool = False) -> str:
+    cache_key = (file_path, as_document)
+    cached = _FILE_ATTACHMENT_CACHE.get(cache_key)
     if cached is not None:
         return cached
-    if file_path.suffix.lower() in IMAGE_EXTENSIONS:
+    if not as_document and file_path.suffix.lower() in IMAGE_EXTENSIONS:
         attachment = await PhotoMessageUploader(vk_api).upload(str(file_path), peer_id=peer_id)
     else:
         attachment = await DocMessagesUploader(vk_api).upload(str(file_path), peer_id=peer_id)
-    _FILE_ATTACHMENT_CACHE[file_path] = attachment
+    _FILE_ATTACHMENT_CACHE[cache_key] = attachment
     return attachment
 
 
-async def send_file(vk_api: API, peer_id: int, file_path: Path) -> None:
-    attachment = await _upload_file_attachment(vk_api, peer_id, file_path)
+async def send_file(vk_api: API, peer_id: int, file_path: Path, *, as_document: bool = False) -> None:
+    attachment = await _upload_file_attachment(vk_api, peer_id, file_path, as_document=as_document)
     await vk_api.messages.send(peer_id=peer_id, attachment=attachment, random_id=random.getrandbits(31))
 
 
@@ -224,7 +247,8 @@ async def _render_block(vk_api: API, peer_id: int, user_id: int, block_id: str, 
     elif block["type"] == "document":
         file_names = block["file"] if isinstance(block["file"], list) else [block["file"]]
         missing = [name for name in file_names if not (FILES_DIR / name).exists()]
-        single_image = len(file_names) == 1 and (FILES_DIR / file_names[0]).suffix.lower() in IMAGE_EXTENSIONS
+        as_document = block.get("send_as_document", False)
+        single_image = not as_document and len(file_names) == 1 and (FILES_DIR / file_names[0]).suffix.lower() in IMAGE_EXTENSIONS
         if missing:
             missing_list = ", ".join(missing)
             text = f"{block['text']}\n\n[файлы ещё не загружены в data/files: {missing_list}]"
@@ -235,7 +259,10 @@ async def _render_block(vk_api: API, peer_id: int, user_id: int, block_id: str, 
         else:
             await show_text(vk_api, peer_id, user_id, block["text"], keyboard, should_replace)
             for name in file_names:
-                await send_file(vk_api, peer_id, FILES_DIR / name)
+                if as_document:
+                    await send_file(vk_api, peer_id, FILES_DIR / name, as_document=True)
+                else:
+                    await send_file(vk_api, peer_id, FILES_DIR / name)
 
     if block.get("auto_next"):
         # auto_next — следующее звено той же цепочки сообщений, а не переход

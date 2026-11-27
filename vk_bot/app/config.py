@@ -12,7 +12,8 @@ DATABASE_URL = getenv("DATABASE_URL")
 BASE_DIR = Path(__file__).parent.parent.parent  # bot_pravburo/vk_bot/app -> bot_pravburo
 DATA_DIR = BASE_DIR / "data"
 FILES_DIR = DATA_DIR / "files"
-SCENARIO_PATH = DATA_DIR / "scenario.json"
+SHARED_SCENARIO_PATH = DATA_DIR / "scenario.json"
+SCENARIO_PATH = DATA_DIR / getenv("VK_SCENARIO_FILE", "scenario.json")
 
 # Блок, который никогда не редактируется поверх предыдущего сообщения —
 # всегда шлётся заново, чтобы пользователь легко находил главное меню в чате.

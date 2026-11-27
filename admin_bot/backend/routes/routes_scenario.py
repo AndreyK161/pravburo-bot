@@ -67,7 +67,12 @@ def _validate_scenario(scenario: dict) -> None:
             raise HTTPException(status_code=422, detail=f"Блок '{block_id}': неизвестный тип '{block_type}'")
 
         for field in BLOCK_REQUIRED_FIELDS[block_type]:
-            if not block.get(field):
+            value = block.get(field)
+            if (block_type, field) == ("document", "text") and value == "":
+                continue
+            if (block_type, field) == ("delay", "seconds") and type(value) is int and value == 0:
+                continue
+            if not value:
                 raise HTTPException(
                     status_code=422, detail=f"Блок '{block_id}': не заполнено обязательное поле '{field}'"
                 )

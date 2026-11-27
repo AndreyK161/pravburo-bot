@@ -50,16 +50,14 @@ BASE_DIR = Path(__file__).parent.parent.parent  # bot_pravburo/admin_bot/backend
 DATA_DIR = BASE_DIR / "data"
 FILES_DIR = DATA_DIR / "files"
 
-# В админке временно показываем старый сценарий. Новый сценарий продолжает
-# жить в data/scenario.json и используется ботом, но не показывается в UI,
-# чтобы его случайно не изменить во время подготовки новой схемы.
-DEFAULT_SCENARIO_PLATFORM = "legacy"
+# Редактор и граф открывают рабочий сценарий нового Telegram-бота.
+DEFAULT_SCENARIO_PLATFORM = "tg"
 SCENARIO_PLATFORMS = {
-    "legacy": {
-        "label": "Старый бот",
-        "path": DATA_DIR / "scenario_old.json",
-        "backup_dir": DATA_DIR / "scenario_backups_old",
-        "positions_path": DATA_DIR / "scenario_graph_positions_old.json",
+    "tg": {
+        "label": "Новый бот (Telegram)",
+        "path": DATA_DIR / "scenario.json",
+        "backup_dir": DATA_DIR / "scenario_backups",
+        "positions_path": DATA_DIR / "scenario_graph_positions.json",
     },
 }
 

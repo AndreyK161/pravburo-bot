@@ -7,6 +7,7 @@ from antispam import AntiSpamMiddleware
 from config import TAG_CONSULTATION_STARTED
 from bitrix import send_referral_to_bitrix
 from database import (
+    accept_bot_consent,
     cancel_user_steps,
     record_activity,
     save_quiz_answer,
@@ -30,6 +31,9 @@ dp = Dispatcher()
 # старые ссылки вида "YDX-DIRECT" без разметки) — строка не парсится и
 # целиком идёт в source как раньше, без block/utm_source/utm_campaign.
 DEEPLINK_BLOCKS = {
+    "lawyerchecklist": "advertising_consultation_checklist",
+    "collectorspack": "advertising_collectors_materials",
+    "mfcpack": "advertising_mfc_materials",
     "consultation": "consultation",
     "chat": "stub_chat",
     "pristavi": "stub_bailiffs",
@@ -106,23 +110,36 @@ async def command_start_handler(message: Message, bot: Bot, command: CommandObje
 
     PENDING_DEEPLINK.pop(message.from_user.id, None)
     await cancel_user_steps(message.from_user.id)
-    if target_block_id:
+    if SCENARIO.get("consent_version"):
+        await save_quiz_answer(message.from_user.id, "lead_branch", 0)
+    if target_block_id in SCENARIO["blocks"]:
         start_block_id = await gate_next_block(bot, message.from_user.id, target_block_id)
         if start_block_id != target_block_id:
             # Не подписан — сначала проверка подписки, целевой блок откроется
             # после неё (см. PENDING_DEEPLINK в scenario_engine).
             PENDING_DEEPLINK[message.from_user.id] = target_block_id
     else:
-        start_block_id = SCENARIO["start"]
+        start_block_id = await gate_next_block(bot, message.from_user.id, SCENARIO["start"])
 
     await render_block(bot, message.chat.id, message.from_user.id, start_block_id, replace=False)
 
 
-# Кнопка "Даю согласие" в CONSENT_BLOCK — не хранит факт согласия в БД, это
-# просто обязательный показ экрана. Ведёт в general_menu, либо, если юзер шёл
-# по диплинку на конкретный раздел, туда (см. PENDING_DEEPLINK).
+# Новый сценарий хранит согласие отдельно по bot_id и версии сценария.
 @dp.callback_query(F.data == "consent:accept")
 async def consent_accept_handler(callback: CallbackQuery, bot: Bot) -> None:
+    await safe_answer(callback)
+    if version := SCENARIO.get("consent_version"):
+        next_block_id = await accept_bot_consent(callback.from_user.id, bot.id, version)
+        if next_block_id is None:
+            return
+        await mark_active(callback.from_user.id)
+        AWAITING_INPUT.pop(callback.from_user.id, None)
+        PENDING_DEEPLINK.pop(callback.from_user.id, None)
+        if next_block_id not in SCENARIO["blocks"]:
+            next_block_id = SCENARIO["start"]
+        next_block_id = await gate_next_block(bot, callback.from_user.id, next_block_id)
+        await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id, replace=False)
+        return
     await mark_active(callback.from_user.id)
     AWAITING_INPUT.pop(callback.from_user.id, None)
     start_block = SCENARIO["blocks"][SCENARIO["start"]]
@@ -134,12 +151,13 @@ async def consent_accept_handler(callback: CallbackQuery, bot: Bot) -> None:
 # Callback handler для кнопок сценария (block:<next_block_id>)
 @dp.callback_query(F.data.startswith("block:"))
 async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
+    # Подтверждаем нажатие до загрузки большого PDF, иначе кнопка долго крутится.
+    await safe_answer(callback)
     await mark_active(callback.from_user.id)
     AWAITING_INPUT.pop(callback.from_user.id, None)
     next_block_id = callback.data.removeprefix("block:")
     next_block_id = await gate_next_block(bot, callback.from_user.id, next_block_id)
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
-    await safe_answer(callback)
 
 
 # Callback handler для кнопок, которые кроме перехода ещё и запоминают выбор
@@ -147,6 +165,7 @@ async def scenario_button_handler(callback: CallbackQuery, bot: Bot) -> None:
 # на вопрос про залоговое имущество.
 @dp.callback_query(F.data.startswith("field:"))
 async def scenario_field_button_handler(callback: CallbackQuery, bot: Bot) -> None:
+    await safe_answer(callback)
     await mark_active(callback.from_user.id)
     AWAITING_INPUT.pop(callback.from_user.id, None)
     payload, next_block_id = callback.data.removeprefix("field:").split(":", 1)
@@ -154,13 +173,13 @@ async def scenario_field_button_handler(callback: CallbackQuery, bot: Bot) -> No
     await save_user_field(callback.from_user.id, field, value)
     next_block_id = await gate_next_block(bot, callback.from_user.id, next_block_id)
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
-    await safe_answer(callback)
 
 
 # Кнопки квиза: кроме перехода запоминают баллы за ответ
 # (quiz:<вопрос>=<баллы>:<next_block_id>). Сумму считаем при подведении итогов.
 @dp.callback_query(F.data.startswith("quiz:"))
 async def quiz_button_handler(callback: CallbackQuery, bot: Bot) -> None:
+    await safe_answer(callback)
     await mark_active(callback.from_user.id)
     AWAITING_INPUT.pop(callback.from_user.id, None)
     payload, next_block_id = callback.data.removeprefix("quiz:").split(":", 1)
@@ -168,7 +187,6 @@ async def quiz_button_handler(callback: CallbackQuery, bot: Bot) -> None:
     await save_quiz_answer(callback.from_user.id, question, int(score))
     next_block_id = await gate_next_block(bot, callback.from_user.id, next_block_id)
     await render_block(bot, callback.message.chat.id, callback.from_user.id, next_block_id)
-    await safe_answer(callback)
 
 
 # Защита от произвольного текста: если юзер написал что-то своё вместо

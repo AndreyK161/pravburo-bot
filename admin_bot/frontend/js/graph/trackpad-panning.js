@@ -2,9 +2,7 @@
 // поведение: свайп двумя пальцами двигает камеру, зумит только пинч (трекпад
 // присылает такие события с ctrlKey=true) или Ctrl/Cmd + колесо мыши.
 export function setupTrackpadPanning(network, container) {
-  container.addEventListener(
-    "wheel",
-    (e) => {
+  const onWheel = (e) => {
       if (e.ctrlKey) return;
       e.preventDefault();
       e.stopPropagation();
@@ -18,7 +16,7 @@ export function setupTrackpadPanning(network, container) {
         scale,
         animation: false,
       });
-    },
-    { capture: true, passive: false }
-  );
+  };
+  container.addEventListener("wheel", onWheel, { capture: true, passive: false });
+  return () => container.removeEventListener("wheel", onWheel, { capture: true });
 }

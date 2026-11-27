@@ -320,6 +320,16 @@
 
   <section id="tab-graph" class="hidden space-y-4">
     <div id="graphPlatformSwitcher" class="flex gap-2"></div>
+    <div class="graph-toolbar">
+      <div id="graphSections" class="graph-sections" aria-label="Разделы сценария"></div>
+      <div class="graph-view-controls">
+        <button id="graphZoomOut" type="button" aria-label="Уменьшить масштаб">−</button>
+        <button id="graphZoomIn" type="button" aria-label="Увеличить масштаб">+</button>
+        <button id="graphFit" type="button">Весь раздел</button>
+        <button id="graphReset" type="button">Выровнять</button>
+      </div>
+    </div>
+    <p id="graphSectionHint" class="text-sm text-gray-500"></p>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
       <div class="bg-white rounded-lg shadow-sm border p-2 lg:col-span-2">
