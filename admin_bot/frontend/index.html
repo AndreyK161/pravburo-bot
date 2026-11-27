@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://unpkg.com/vis-network@9/standalone/umd/vis-network.min.js"></script>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="garland.css">
 </head>
 <body class="h-screen overflow-hidden bg-[#f3f4f6] text-[#1f2530]">
 
@@ -124,7 +125,7 @@
 </aside>
 
 <div class="flex h-full flex-col overflow-hidden md:ml-64">
-  <header class="flex flex-shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 py-4 md:px-6">
+  <header class="admin-header flex flex-shrink-0 items-center gap-3 border-b border-gray-200 bg-white px-4 py-4 md:px-6">
     <button id="sidebarToggleBtn" aria-label="Меню" aria-expanded="false" class="flex-shrink-0 rounded-md p-2 text-gray-500 transition hover:bg-gray-100 md:hidden">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
     </button>
@@ -410,6 +411,7 @@
   </form>
 </div>
 
+<script type="module" src="js/garland.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
