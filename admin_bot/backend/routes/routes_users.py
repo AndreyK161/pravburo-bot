@@ -21,8 +21,13 @@ FILTERABLE_FIELDS = {
 # принять пользователей, когда бот появится.
 PLATFORM_TABLES = {"tg": "tg_users", "vk": "vk_users", "ig": "ig_users"}
 
+USER_LIST_COLUMNS = (
+    "user_id, username, name, phone, region, source, current_stage, "
+    "has_property, is_blocked, created_at, updated_at, tag_id"
+)
 USERS_UNION = " UNION ALL ".join(
-    f"SELECT *, '{platform}' AS platform FROM {table}" for platform, table in PLATFORM_TABLES.items()
+    f"SELECT {USER_LIST_COLUMNS}, '{platform}' AS platform FROM {table}"
+    for platform, table in PLATFORM_TABLES.items()
 )
 
 
