@@ -5,7 +5,12 @@
     "consent": {
       "type": "message",
       "text": "Продолжая пользоваться ботом, вы соглашаетесь на обработку персональных данных.\nПодробнее: https://prav-buro.ru/privacy-policy",
-      "buttons": [{"text": "Даю согласие", "consent": true}],
+      "buttons": [
+        {
+          "text": "Даю согласие",
+          "consent": true
+        }
+      ],
       "name": "Согласие на обработку персональных данных"
     },
     "welcome": {
@@ -1080,7 +1085,10 @@
       "html": true,
       "text": "Спасибо, что доверяете нам! Юристы Правбюро подготовили для вас пакет документов по банкротству в МФЦ и инструкцию по их заполнению.\n📌 Видеоинструкция: <a href=\"https://youtu.be/f_dwDotO2TQ?si=mw3Qi8p0_ttieTF8\">https://youtu.be/f_dwDotO2TQ?si=mw3Qi8p0_ttieTF8</a>",
       "buttons": [],
-      "auto_next": ["advertising_mfc_main_delay", "consultation"],
+      "auto_next": [
+        "advertising_mfc_main_delay",
+        "consultation"
+      ],
       "auto_next_delay": 0,
       "name": "Реклама: пакет МФЦ со страницы «Спасибо»"
     },
@@ -1112,7 +1120,9 @@
       "html": true,
       "text": "<b>Ваш чек-лист для разговора с юристом</b>\n📌 Откройте чек-лист, когда юрист позвонит: так все будет под рукой. И не забудьте отметить вопросы, которые хотите задать специалисту.",
       "buttons": [],
-      "name": "Реклама: чек-лист со страницы спасибо"
+      "name": "Реклама: чек-лист со страницы спасибо",
+      "auto_next": "advertising_mfc_main_delay",
+      "auto_next_delay": 0
     },
     "consultation_checklist": {
       "type": "document",
