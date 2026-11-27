@@ -7,7 +7,9 @@ from pathlib import Path
 
 from vkbottle import API, Callback, Keyboard
 from vkbottle.exception_factory import VKAPIError
-from vkbottle.tools import DocMessagesUploader, PhotoMessageUploader
+from vkbottle.tools import PhotoMessageUploader
+
+from document_uploader import DocumentMessagesUploader
 
 from config import (
     AUTO_NEXT_DELAY_SECONDS,
@@ -135,7 +137,7 @@ async def _upload_file_attachment(vk_api: API, peer_id: int, file_path: Path, *,
     if not as_document and file_path.suffix.lower() in IMAGE_EXTENSIONS:
         attachment = await PhotoMessageUploader(vk_api).upload(str(file_path), peer_id=peer_id)
     else:
-        attachment = await DocMessagesUploader(vk_api).upload(str(file_path), peer_id=peer_id)
+        attachment = await DocumentMessagesUploader(vk_api).upload(str(file_path), peer_id=peer_id)
     _FILE_ATTACHMENT_CACHE[cache_key] = attachment
     return attachment
 
