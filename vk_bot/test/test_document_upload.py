@@ -1,28 +1,48 @@
+import socket
 import tempfile
+from contextlib import asynccontextmanager
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock, patch
 
 from document_uploader import DocumentMessagesUploader
 
 
 class DocumentUploadTests(unittest.IsolatedAsyncioTestCase):
-    async def test_upload_uses_ascii_multipart_filename_and_keeps_russian_title(self):
-        for extension in (".pdf", ".docx", ".odt", ".jpg"):
-            with self.subTest(extension=extension), tempfile.TemporaryDirectory() as directory:
-                path = Path(directory) / f"Памятка Правбюро{extension}"
-                path.write_bytes(b"document contents")
-                body = bytearray()
+    @asynccontextmanager
+    async def upload_session(self, *, connector, timeout):
+        self.assertEqual(connector.family, socket.AF_INET)
+        self.assertEqual(timeout.total, 120)
+
+        @asynccontextmanager
+        async def post(url, *, data):
+            self.assertEqual(url, "https://upload.example.test")
+            if hasattr(self, "body"):
+                body = self.body
 
                 class Writer:
                     async def write(self, chunk):
                         body.extend(chunk)
 
-                async def upload(url, *, method, data):
-                    self.assertEqual(method, "POST")
-                    await data().write(Writer())
-                    return '{"file": "uploaded-file-token"}'
+                await data().write(Writer())
+            yield SimpleNamespace(
+                raise_for_status=Mock(),
+                text=AsyncMock(return_value=self.upload_response),
+            )
+
+        try:
+            yield SimpleNamespace(post=post)
+        finally:
+            await connector.close()
+
+    async def test_upload_uses_ascii_multipart_filename_and_keeps_russian_title(self):
+        for extension in (".pdf", ".docx", ".odt", ".jpg"):
+            with self.subTest(extension=extension), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / f"Памятка Правбюро{extension}"
+                path.write_bytes(b"document contents")
+                body = self.body = bytearray()
+                self.upload_response = '{"file": "uploaded-file-token"}'
 
                 api = SimpleNamespace(
                     request=AsyncMock(side_effect=[
@@ -31,9 +51,9 @@ class DocumentUploadTests(unittest.IsolatedAsyncioTestCase):
                             "owner_id": -123, "id": 456, "access_key": "key",
                         }}},
                     ]),
-                    http_client=SimpleNamespace(request_text=upload),
                 )
-                attachment = await DocumentMessagesUploader(api).upload(str(path), peer_id=789)
+                with patch("document_uploader.ClientSession", side_effect=self.upload_session):
+                    attachment = await DocumentMessagesUploader(api).upload(str(path), peer_id=789)
                 self.assertEqual(attachment, "doc-123_456_key")
                 self.assertIn(f'filename="document{extension}"'.encode(), body)
                 self.assertIn(b'name="file"', body)
@@ -49,9 +69,9 @@ class DocumentUploadTests(unittest.IsolatedAsyncioTestCase):
             path.write_bytes(b"document contents")
             api = SimpleNamespace(
                 request=AsyncMock(return_value={"response": {"upload_url": "https://upload.example.test"}}),
-                http_client=SimpleNamespace(request_text=AsyncMock(return_value="{}")),
             )
-            with self.assertRaisesRegex(RuntimeError, "ВК не принял документ"):
+            self.upload_response = "{}"
+            with patch("document_uploader.ClientSession", side_effect=self.upload_session), self.assertRaisesRegex(RuntimeError, "ВК не принял документ"):
                 await DocumentMessagesUploader(api).upload(str(path), peer_id=789)
             api.request.assert_awaited_once()
 
