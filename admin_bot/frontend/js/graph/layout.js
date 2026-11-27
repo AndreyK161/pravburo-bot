@@ -9,10 +9,11 @@ export const GRAPH_SECTIONS = [
 
 export function sectionOf(node) {
   const id = node.id;
+  if (/^advertising_/.test(id)) return "entry";
   if (/^(hard_|quiz_|situation_hard$)/.test(id)) return "hard";
   if (/^(collectors_|situation_collectors$)/.test(id)) return "collectors";
   if (/^(bailiffs_|situation_bailiffs$)/.test(id)) return "bailiffs";
-  if (/^(consultation|advertising_consultation)/.test(id)) return "consultation";
+  if (/^consultation/.test(id)) return "consultation";
   if (/^referral/.test(id)) return "referral";
   return "entry";
 }
